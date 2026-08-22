@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GlobeTrotter — Shared Itinerary & Map Route</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -49,7 +50,7 @@
       }
     }
   </script>
-  <link rel="stylesheet" href="css/custom.css">
+  <link rel="stylesheet" href="css/custom.css?v=2.2">
   <!-- Supabase CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- Lucide Icons -->
@@ -69,15 +70,14 @@
     }
   </style>
 </head>
-<body class="bg-neutral-950 text-neutral-100 min-h-screen flex flex-col page-fade-in" x-data="sharedTripPage" x-init="initSharedPage()">
+<body class="bg-neutral-950 text-neutral-100 min-h-screen flex flex-col" x-data="sharedTripPage" x-init="initSharedPage()">
 
-  <main class="flex-grow max-w-4xl w-full mx-auto px-4 sm:px-6 py-8" x-cloak x-show="initialized">
-    
-    <!-- Top Brand Logo Header -->
+  <main class="flex-grow max-w-4xl w-full mx-auto px-4 sm:px-6 py-8 page-fade-in" x-cloak x-show="initialized">
+        <!-- Top Brand Logo Header -->
     <div class="flex items-center justify-between border-b border-neutral-900 pb-6 mb-8">
-      <div class="flex items-center gap-2 text-xl font-bold tracking-tight text-white">
-        <i data-lucide="compass" class="w-6 h-6 text-emerald-400"></i>
-        <span>Globe<span class="text-emerald-400">Trotter</span></span>
+      <div class="flex items-center gap-2 text-xl font-bold tracking-tight text-neutral-100">
+        <i data-lucide="compass" class="w-6 h-6 text-emerald-500"></i>
+        <span>Globe<span class="text-emerald-500">Trotter</span></span>
       </div>
       <a href="index.html" class="px-4 py-2 text-xs font-semibold bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-black rounded-xl transition-all">
         Build Your Own
@@ -86,14 +86,14 @@
 
     <!-- Error/Not Found state -->
     <div x-show="error" class="glass-card rounded-2xl border border-neutral-850 p-12 text-center max-w-md mx-auto my-12">
-      <div class="w-14 h-14 bg-neutral-900 border border-neutral-800 text-rose-450 rounded-full flex items-center justify-center mx-auto mb-4">
+      <div class="w-14 h-14 bg-neutral-850 border border-neutral-800 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4">
         <i data-lucide="lock" class="w-6 h-6"></i>
       </div>
-      <h2 class="text-xl font-bold text-white mb-2">Itinerary Unreachable</h2>
-      <p class="text-sm text-neutral-455 leading-relaxed mb-6">
+      <h2 class="text-xl font-bold text-neutral-100 mb-2">Itinerary Unreachable</h2>
+      <p class="text-sm text-neutral-450 leading-relaxed mb-6">
         This trip details cannot be displayed. It may be set to private or the link is expired.
       </p>
-      <a href="index.html" class="inline-flex py-3 px-6 bg-neutral-900 hover:bg-neutral-800 text-sm font-semibold rounded-xl border border-neutral-800 text-white transition-colors">
+      <a href="index.html" class="inline-flex py-3 px-6 bg-emerald-500 hover:bg-emerald-600 text-xs font-bold text-black rounded-xl border border-emerald-500 transition-colors shadow-md">
         Return Home
       </a>
     </div>
@@ -113,10 +113,10 @@
           <img :src="trip?.cover_photo_url" :alt="trip?.name" class="w-full h-full object-cover brightness-[0.7]">
           <div class="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/20 to-transparent"></div>
           <div class="absolute bottom-6 left-6 right-6">
-            <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full">Shared Trip</span>
-            <h2 class="text-2xl md:text-3xl font-extrabold text-white mt-2" x-text="trip?.name"></h2>
-            <p class="text-xs text-neutral-300 mt-1 flex items-center gap-1.5">
-              <i data-lucide="calendar" class="w-3.5 h-3.5 text-neutral-400"></i>
+            <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 rounded-full">Shared Trip</span>
+            <h2 class="text-2xl md:text-3xl font-extrabold text-neutral-100 mt-2" x-text="trip?.name"></h2>
+            <p class="text-xs text-neutral-450 mt-1 flex items-center gap-1.5">
+              <i data-lucide="calendar" class="w-3.5 h-3.5 text-neutral-500"></i>
               <span x-text="trip ? formatDateRange(trip.start_date, trip.end_date) : ''"></span>
             </p>
           </div>
@@ -130,23 +130,23 @@
       <div class="grid grid-cols-3 gap-4">
         <div class="glass-card rounded-xl p-4 border border-neutral-800/40 text-center">
           <span class="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider block">Duration</span>
-          <span class="text-lg font-bold text-white mt-1 block" x-text="timeline.length + ' Days'"></span>
+          <span class="text-lg font-bold text-neutral-100 mt-1 block" x-text="timeline.length + ' Days'"></span>
         </div>
         <div class="glass-card rounded-xl p-4 border border-neutral-800/40 text-center">
           <span class="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider block">Stops</span>
-          <span class="text-lg font-bold text-white mt-1 block" x-text="stops.length + ' Cities'"></span>
+          <span class="text-lg font-bold text-neutral-100 mt-1 block" x-text="stops.length + ' Cities'"></span>
         </div>
         <div class="glass-card rounded-xl p-4 border border-neutral-800/40 text-center">
           <span class="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider block">Events</span>
-          <span class="text-lg font-bold text-white mt-1 block" x-text="activities.length + ' Scheduled'"></span>
+          <span class="text-lg font-bold text-neutral-100 mt-1 block" x-text="activities.length + ' Scheduled'"></span>
         </div>
       </div>
 
       <!-- Interactive Shared Route Map -->
       <div x-show="stops.length > 0" class="space-y-4">
         <div>
-          <h3 class="text-lg font-bold text-white mb-2">Interactive Route Map</h3>
-          <p class="text-xs text-neutral-400">View destinations and full transit path mapped below.</p>
+          <h3 class="text-lg font-bold text-neutral-100 mb-2">Interactive Route Map</h3>
+          <p class="text-xs text-neutral-450">View destinations and full transit path mapped below.</p>
         </div>
 
         <div class="glass-card rounded-3xl border border-neutral-850 overflow-hidden relative shadow-2xl" style="height: 380px;">
@@ -156,23 +156,23 @@
         <!-- Total Road Trip Summary Metrics -->
         <div x-cloak x-show="roadTripMetrics" class="glass-card rounded-2xl p-5 border border-emerald-500/20 bg-emerald-500/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-slide-in">
           <div class="flex items-center gap-3">
-            <div class="p-2 bg-emerald-500/15 text-emerald-400 rounded-xl">
+            <div class="p-2 bg-emerald-500/15 text-emerald-500 rounded-xl">
               <i data-lucide="route" class="w-5 h-5"></i>
             </div>
             <div>
-              <h4 class="text-xs font-bold text-white uppercase tracking-wider">Itinerary Route Metrics</h4>
+              <h4 class="text-xs font-bold text-neutral-100 uppercase tracking-wider">Itinerary Route Metrics</h4>
               <p class="text-[11px] text-neutral-450 mt-0.5">Calculated real-time driving transit metrics via Google Maps Engine.</p>
             </div>
           </div>
           <div class="flex gap-6">
             <div>
               <span class="text-[10px] text-neutral-500 uppercase font-semibold block">Total Route Distance</span>
-              <span class="text-sm font-extrabold text-white" x-text="roadTripMetrics?.distance"></span>
+              <span class="text-sm font-extrabold text-neutral-100" x-text="roadTripMetrics?.distance"></span>
             </div>
             <div class="h-8 w-px bg-neutral-800 font-normal"></div>
             <div>
               <span class="text-[10px] text-neutral-500 uppercase font-semibold block">Estimated Commute Time</span>
-              <span class="text-sm font-extrabold text-white" x-text="roadTripMetrics?.duration"></span>
+              <span class="text-sm font-extrabold text-neutral-100" x-text="roadTripMetrics?.duration"></span>
             </div>
           </div>
         </div>
@@ -180,8 +180,8 @@
 
       <!-- Timeline Title -->
       <div>
-        <h3 class="text-lg font-bold text-white mb-2">Master Timeline Calendar</h3>
-        <p class="text-xs text-neutral-400">Chronological travel schedule itinerary.</p>
+        <h3 class="text-lg font-bold text-neutral-100 mb-2">Master Timeline Calendar</h3>
+        <p class="text-xs text-neutral-450">Chronological travel schedule itinerary.</p>
       </div>
 
       <!-- Master Timeline read-only -->
@@ -195,13 +195,13 @@
             <!-- Day Heading -->
             <div class="flex items-baseline justify-between mb-3 flex-wrap gap-2">
               <div>
-                <span class="text-xs font-bold text-emerald-450 uppercase tracking-wider" x-text="'Day ' + day.dayIndex"></span>
+                <span class="text-xs font-bold text-emerald-500 uppercase tracking-wider" x-text="'Day ' + day.dayIndex"></span>
                 <span class="text-xs text-neutral-500 mx-1.5">&bull;</span>
-                <span class="text-sm font-semibold text-neutral-300" x-text="formatDate(day.date)"></span>
+                <span class="text-sm font-semibold text-neutral-450" x-text="formatDate(day.date)"></span>
               </div>
               <div x-show="day.stop" class="text-right">
-                <span class="text-xs font-bold text-white" x-text="day.stop?.city_name"></span>
-                <span class="text-[10px] text-neutral-400 ml-1" x-text="'(' + day.stop?.country + ')'"></span>
+                <span class="text-xs font-bold text-neutral-100" x-text="day.stop?.city_name"></span>
+                <span class="text-[10px] text-neutral-450 ml-1" x-text="'(' + day.stop?.country + ')'"></span>
               </div>
             </div>
 
@@ -220,12 +220,12 @@
                         <i :data-lucide="getCategoryIcon(act.category)" class="w-4 h-4"></i>
                       </div>
                       <div class="min-w-0">
-                        <h4 class="text-sm font-bold text-white truncate" x-text="act.name"></h4>
-                        <p class="text-[10px] text-neutral-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                        <h4 class="text-sm font-bold text-neutral-100 truncate" x-text="act.name"></h4>
+                        <p class="text-[10px] text-neutral-450 mt-0.5 flex items-center gap-1.5 flex-wrap">
                           <span class="font-semibold uppercase tracking-wider text-neutral-500" x-text="act.category"></span>
-                          <span x-show="act.duration" class="text-neutral-600">&bull;</span>
+                          <span x-show="act.duration" class="text-neutral-500">&bull;</span>
                           <span x-show="act.duration" x-text="formatDuration(act.duration)"></span>
-                          <span x-show="act.notes" class="text-neutral-600">&bull;</span>
+                          <span x-show="act.notes" class="text-neutral-500">&bull;</span>
                           <span class="truncate" x-text="act.notes"></span>
                         </p>
                       </div>
@@ -242,7 +242,7 @@
     </div>
   </main>
 
-  <footer class="py-8 text-center text-xs text-neutral-600 border-t border-neutral-900 mt-12">
+  <footer class="py-8 text-center text-xs text-neutral-500 border-t border-neutral-800 mt-12">
     Powered by GlobeTrotter Planner. Build yours for free.
   </footer>
 
@@ -254,7 +254,7 @@
     import { getSupabase } from './js/supabase-client.js';
     import { getTripBySlug } from './js/trips.js';
     import { getStopsForTrip } from './js/stops.js';
-    import { refreshIcons } from './js/ui-helpers.js';
+    import { refreshIcons } from './js/ui-helpers.js?v=2.2';
 
     // Styled dark map sheet
     const darkMapStyle = [

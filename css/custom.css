@@ -8,6 +8,56 @@ body {
   overflow-x: hidden;
 }
 
+/* Google Places Autocomplete (.pac-container) Global Styles */
+.pac-container {
+  background-color: #ffffff !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+  font-family: inherit !important;
+  margin-top: 6px !important;
+  overflow: hidden !important;
+  z-index: 99999 !important;
+}
+
+.pac-item {
+  padding: 10px 14px !important;
+  color: #1f2937 !important;
+  border-top: 1px solid #f3f4f6 !important;
+  cursor: pointer !important;
+  font-size: 13px !important;
+  background-color: #ffffff !important;
+  transition: background-color 0.15s ease, color 0.15s ease !important;
+}
+
+.pac-item:first-child {
+  border-top: none !important;
+}
+
+.pac-item:hover, .pac-item-selected {
+  background-color: #f3f4f6 !important;
+  color: #111827 !important;
+}
+
+.pac-item .pac-item-query {
+  color: #111827 !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+}
+
+.pac-item:hover .pac-item-query {
+  color: #111827 !important;
+}
+
+.pac-matched {
+  color: #10b981 !important;
+  font-weight: 800 !important;
+}
+
+.pac-icon {
+  filter: invert(0.8) sepia(1) saturate(5) hue-rotate(110deg) !important;
+}
+
 /* Heading styles */
 h1, h2, h3, .logo-text {
   font-family: var(--font-display);
@@ -205,11 +255,20 @@ button:hover [data-lucide="compass"],
 
 /* Left Sidebar Layout (Full Viewport Height top-0, 100vh) */
 #left-sidebar {
+  position: fixed !important;
   top: 0;
-  height: 100vh;
+  left: 0;
+  height: 100vh !important;
   width: 4rem;
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 2px 0 12px rgba(0, 0, 0, 0.04);
+  overflow: hidden !important;
+  z-index: 50;
+}
+
+#left-sidebar .custom-scrollbar {
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch;
 }
 
 #left-sidebar:hover, #left-sidebar.toggled-open {
@@ -306,9 +365,16 @@ body.sidebar-active.sidebar-push header {
     width: 100% !important;
   }
   #left-sidebar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    height: 100vh !important;
     transform: translateX(-100%);
     width: 16rem !important;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    overflow: hidden !important;
+    z-index: 50;
   }
   #left-sidebar.toggled-open {
     transform: translateX(0) !important;

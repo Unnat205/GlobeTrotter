@@ -1,2 +1,5 @@
 /sql/
 test-budget.js
+/js/env.js
+.env
+.env.local

@@ -1,21 +1,21 @@
-// Configuration manager for Supabase
-// You can either paste your credentials below or use the settings panel in the app.
+// Configuration manager for Supabase & Google Maps API
+// Loads configuration from localStorage or local environment window.ENV_CONFIG
 
-const DEFAULT_SUPABASE_URL = "https://jukfxajspatnwqahsvja.supabase.co";
-const DEFAULT_SUPABASE_ANON_KEY = "sb_publishable_4Eyg_sI_xh-V9_YdkFmsDw_Ju_JM5se";
-const DEFAULT_GOOGLE_MAPS_KEY = "AIzaSyDLdsmlrG6PYg5ImIhsDLL2YIZnMSP3JKU";
+const DEFAULT_SUPABASE_URL = (typeof window !== 'undefined' && window.ENV_CONFIG?.SUPABASE_URL) || "https://jukfxajspatnwqahsvja.supabase.co";
+const DEFAULT_SUPABASE_ANON_KEY = (typeof window !== 'undefined' && window.ENV_CONFIG?.SUPABASE_ANON_KEY) || "";
+const DEFAULT_GOOGLE_MAPS_KEY = (typeof window !== 'undefined' && window.ENV_CONFIG?.GOOGLE_MAPS_KEY) || "";
 
 export const config = {
   getSupabaseUrl() {
-    return localStorage.getItem("GLOBETROTTER_SUPABASE_URL") || DEFAULT_SUPABASE_URL;
+    return localStorage.getItem("GLOBETROTTER_SUPABASE_URL") || (typeof window !== 'undefined' && window.ENV_CONFIG?.SUPABASE_URL) || DEFAULT_SUPABASE_URL;
   },
 
   getSupabaseAnonKey() {
-    return localStorage.getItem("GLOBETROTTER_SUPABASE_ANON_KEY") || DEFAULT_SUPABASE_ANON_KEY;
+    return localStorage.getItem("GLOBETROTTER_SUPABASE_ANON_KEY") || (typeof window !== 'undefined' && window.ENV_CONFIG?.SUPABASE_ANON_KEY) || DEFAULT_SUPABASE_ANON_KEY;
   },
 
   getGoogleMapsKey() {
-    return localStorage.getItem("GLOBETROTTER_GOOGLE_MAPS_KEY") || DEFAULT_GOOGLE_MAPS_KEY;
+    return localStorage.getItem("GLOBETROTTER_GOOGLE_MAPS_KEY") || (typeof window !== 'undefined' && window.ENV_CONFIG?.GOOGLE_MAPS_KEY) || DEFAULT_GOOGLE_MAPS_KEY;
   },
 
   setGoogleMapsKey(key) {

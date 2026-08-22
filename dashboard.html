@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GlobeTrotter — Travel Dashboard</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -49,7 +50,7 @@
       }
     }
   </script>
-  <link rel="stylesheet" href="css/custom.css">
+  <link rel="stylesheet" href="css/custom.css?v=2.2">
   <!-- Supabase CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- Lucide Icons -->
@@ -58,22 +59,28 @@
     [x-cloak] { display: none !important; }
   </style>
 </head>
-<body class="bg-neutral-950 text-neutral-100 min-h-screen flex flex-col page-fade-in" x-data="dashboardPage" x-init="initDashboard()">
+<body class="bg-neutral-950 text-neutral-100 min-h-screen flex flex-col" x-data="dashboardPage" x-init="initDashboard()">
 
   <!-- Toast Container and Navbar will be injected automatically -->
 
-  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 relative pb-24" x-cloak x-show="authorized">
+  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 relative pb-24 page-fade-in" x-cloak x-show="authorized">
     
     <!-- Large Hero Banner Image (Screen 3) -->
-    <div class="relative rounded-3xl overflow-hidden mb-8 border border-neutral-800/40 shadow-xl h-56 md:h-64">
+    <div class="relative rounded-3xl overflow-hidden mb-8 border border-neutral-800/60 shadow-2xl h-60 md:h-64">
       <img src="https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1200&q=80" alt="Scenic Travel Banner" class="w-full h-full object-cover">
       <!-- Dark image overlay for high contrast text readability -->
-      <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent"></div>
-      <div class="absolute inset-0 flex flex-col justify-end p-6 md:p-8">
-        <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-white drop-shadow-md">Adventure Dashboard</h1>
-        <p class="text-xs md:text-sm text-neutral-200 max-w-md mt-1.5 leading-relaxed drop-shadow">
-          Create, schedule, and analyze budgets for your multi-city journeys across the globe.
-        </p>
+      <div class="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/50 to-transparent"></div>
+      <div class="absolute inset-0 flex flex-col sm:flex-row sm:items-end justify-between p-6 md:p-8 gap-4">
+        <div>
+          <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-neutral-100 drop-shadow-md">Adventure Dashboard</h1>
+          <p class="text-xs md:text-sm text-neutral-300 max-w-md mt-1.5 leading-relaxed drop-shadow">
+            Create, schedule, and analyze budgets for your multi-city journeys across the globe.
+          </p>
+        </div>
+        <a href="trip-create.html" class="inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 active:scale-95 text-black font-extrabold text-sm transition-all shadow-xl hover:shadow-emerald-500/20 whitespace-nowrap self-start sm:self-auto">
+          <i data-lucide="plus-circle" class="w-5 h-5 stroke-[2.5]"></i>
+          <span>Plan a New Trip</span>
+        </a>
       </div>
     </div>
 
@@ -107,11 +114,11 @@
         <div class="flex justify-between items-center">
           <span class="text-xs font-semibold uppercase tracking-wider text-neutral-450">Allocated Budget</span>
           <div class="p-2 bg-purple-500/10 text-purple-500 rounded-lg">
-            <i data-lucide="dollar-sign" class="w-5 h-5"></i>
+            <i data-lucide="indian-rupee" class="w-5 h-5"></i>
           </div>
         </div>
         <div class="mt-2 flex items-baseline gap-2">
-          <span class="text-3xl font-extrabold text-neutral-100" x-text="'$' + stats.totalBudget.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})">0.00</span>
+          <span class="text-3xl font-extrabold text-neutral-100" x-text="'₹' + stats.totalBudget.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})">0.00</span>
           <span class="text-xs text-neutral-450 font-medium">across stops</span>
         </div>
       </div>
@@ -207,14 +214,14 @@
 
     <!-- Empty State -->
     <div x-show="!loading && totalVisibleTripsCount === 0" class="glass-card rounded-2xl border border-neutral-800/60 p-12 text-center flex flex-col items-center justify-center max-w-xl mx-auto my-8">
-      <div class="w-16 h-16 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400 mb-4">
+      <div class="w-16 h-16 rounded-full bg-neutral-850 border border-neutral-800 flex items-center justify-center text-neutral-450 mb-4">
         <i data-lucide="map-pin" class="w-8 h-8"></i>
       </div>
-      <h3 class="text-xl font-bold text-white mb-2">No itineraries found</h3>
-      <p class="text-sm text-neutral-400 mb-6 max-w-sm">
+      <h3 class="text-xl font-bold text-neutral-100 mb-2">No itineraries found</h3>
+      <p class="text-sm text-neutral-450 mb-6 max-w-sm">
         Start your travel planning by creating your first multi-city adventure.
       </p>
-      <a href="trip-create.html" class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-black font-semibold text-sm transition-all">
+      <a href="trip-create.html" class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-black font-extrabold text-sm transition-all shadow-md">
         <i data-lucide="plus" class="w-4 h-4"></i>
         <span>Create My First Trip</span>
       </a>
@@ -246,7 +253,7 @@
                   <!-- Actions dropdown -->
                   <div class="absolute top-4 right-4" x-data="{ open: false }">
                     <button @click.prevent="open = !open" class="p-2 bg-neutral-900/80 hover:bg-neutral-900 border border-neutral-700/50 rounded-lg text-white backdrop-blur-md transition-colors">
-                      <i data-lucide="more-vertical" class="w-4 h-4"></i>
+                      <i data-lucide="more-vertical" class="w-4 h-4 text-orange-500"></i>
                     </button>
                     <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 mt-1 w-36 rounded-xl border border-neutral-800 bg-neutral-950/95 shadow-2xl p-1 z-20">
                       <button @click="deleteTripHandler(trip.id)" class="w-full flex items-center gap-2 px-3 py-2 text-xs text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors text-left">
@@ -311,7 +318,7 @@
 
             <div class="absolute top-4 right-4" x-data="{ open: false }">
               <button @click.prevent="open = !open" class="p-2 bg-neutral-900/80 hover:bg-neutral-900 border border-neutral-700/50 rounded-lg text-neutral-100 backdrop-blur-md transition-colors">
-                <i data-lucide="more-vertical" class="w-4 h-4"></i>
+                <i data-lucide="more-vertical" class="w-4 h-4 text-orange-500"></i>
               </button>
               <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 mt-1 w-36 rounded-xl border border-neutral-800 bg-neutral-900 shadow-2xl p-1 z-20">
                 <button @click="deleteTripHandler(trip.id)" class="w-full flex items-center gap-2 px-3 py-2 text-xs text-rose-500 hover:bg-rose-50 rounded-lg transition-colors text-left font-medium">
@@ -330,7 +337,7 @@
                 <span x-text="formatDateRange(trip.start_date, trip.end_date)">Date Range</span>
               </p>
               <p class="text-sm text-neutral-450 mt-3 line-clamp-2 leading-relaxed" x-text="trip.description || 'No description provided.'"></p>
-            </div>v>
+            </div>
  
             <div>
               <div class="grid grid-cols-3 gap-1.5 mt-5">
@@ -373,7 +380,7 @@
   <!-- Scripts -->
   <script type="module">
     import { getSession } from './js/auth.js';
-    import { loadNavbar, showToast, refreshIcons } from './js/ui-helpers.js';
+    import { loadNavbar, showToast, refreshIcons } from './js/ui-helpers.js?v=2.2';
     import { getTrips, deleteTrip } from './js/trips.js';
     import { getSupabase } from './js/supabase-client.js';
 
@@ -391,7 +398,7 @@
 
         regions: [
           { name: 'Europe', icon: 'landmark' },
-          { name: 'Asia', icon: 'cherry-blossom' },
+          { name: 'Asia', icon: 'flower' },
           { name: 'North America', icon: 'building' },
           { name: 'South America', icon: 'mountain' },
           { name: 'Oceania', icon: 'waves' }
