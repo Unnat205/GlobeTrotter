@@ -11,16 +11,38 @@
       theme: {
         extend: {
           fontFamily: {
-            sans: ['Inter', 'sans-serif'],
+            sans: ['var(--font-sans)', 'sans-serif'],
           },
           colors: {
+            emerald: {
+              50: 'var(--color-primary-50)',
+              100: 'var(--color-primary-100)',
+              200: 'var(--color-primary-200)',
+              300: 'var(--color-primary-300)',
+              400: 'var(--color-primary-400)',
+              450: 'var(--color-primary-450)',
+              500: 'var(--color-primary-500)',
+              600: 'var(--color-primary-600)',
+              700: 'var(--color-primary-700)',
+              800: 'var(--color-primary-800)',
+              850: 'var(--color-neutral-850)',
+              900: 'var(--color-neutral-900)',
+            },
             neutral: {
-              950: '#030303',
-              900: '#09090b',
-              850: '#121215',
-              800: '#18181b',
-              700: '#27272a',
-              600: '#3f3f46',
+              950: 'var(--color-neutral-950)',
+              900: 'var(--color-neutral-900)',
+              850: 'var(--color-neutral-850)',
+              800: 'var(--color-neutral-800)',
+              750: 'var(--color-neutral-750)',
+              700: 'var(--color-neutral-700)',
+              650: 'var(--color-neutral-650)',
+              600: 'var(--color-neutral-600)',
+              450: 'var(--color-neutral-450)',
+              400: 'var(--color-neutral-400)',
+              350: 'var(--color-neutral-350)',
+              300: 'var(--color-neutral-300)',
+              200: 'var(--color-neutral-200)',
+              100: 'var(--color-neutral-100)',
             }
           }
         }
@@ -55,22 +77,22 @@
   <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6" x-cloak x-show="authorized">
     
     <!-- Workspace Sub-Header Navigation Ribbon -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-5 border-b border-neutral-900">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-5 border-b border-neutral-800/40">
       <div>
         <div class="flex items-center gap-3">
-          <a href="dashboard.html" class="p-2 hover:bg-neutral-900 rounded-lg text-neutral-450 hover:text-white transition-colors" title="Back to Dashboard">
+          <a href="dashboard.html" class="p-2 hover:bg-neutral-850 rounded-lg text-neutral-450 hover:text-emerald-500 transition-colors" title="Back to Dashboard">
             <i data-lucide="arrow-left" class="w-4 h-4"></i>
           </a>
           <div>
-            <h1 class="text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
+            <h1 class="text-xl font-extrabold text-neutral-100 tracking-tight flex items-center gap-2">
               <span x-text="trip?.name || 'Loading Plan...'"></span>
-              <span x-show="trip?.is_public" class="text-[9px] px-2 py-0.5 bg-emerald-500/10 text-emerald-450 rounded-full border border-emerald-500/20 font-bold uppercase tracking-wider">Public</span>
-              <span x-show="trip && !trip.is_public" class="text-[9px] px-2 py-0.5 bg-neutral-800 text-neutral-400 rounded-full border border-neutral-700 font-bold uppercase tracking-wider">Private</span>
+              <span x-show="trip?.is_public" class="text-[9px] px-2 py-0.5 bg-emerald-500/10 text-emerald-600 rounded-full border border-emerald-500/30 font-bold uppercase tracking-wider">Public</span>
+              <span x-show="trip && !trip.is_public" class="text-[9px] px-2 py-0.5 bg-neutral-800 text-neutral-450 rounded-full border border-neutral-700 font-bold uppercase tracking-wider">Private</span>
             </h1>
-            <p class="text-xs text-neutral-450 mt-1 flex items-center gap-1.5">
-              <i data-lucide="calendar" class="w-3.5 h-3.5 text-neutral-500"></i>
+            <p class="text-xs text-neutral-450 mt-1 flex items-center gap-1.5 font-medium">
+              <i data-lucide="calendar" class="w-3.5 h-3.5 text-neutral-450"></i>
               <span x-text="trip ? formatDateRange(trip.start_date, trip.end_date) : 'Loading dates...'"></span>
-              <span class="text-neutral-750">&bull;</span>
+              <span class="text-neutral-450">&bull;</span>
               <span x-text="trip ? calculateDays(trip.start_date, trip.end_date) + ' Days Total' : ''"></span>
             </p>
           </div>
@@ -81,14 +103,14 @@
       <div class="flex flex-wrap items-center gap-3" x-show="stops.length > 0">
         <!-- Visibility toggle -->
         <button @click="togglePrivacy()" x-show="trip"
-          class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-neutral-900 border border-neutral-800 hover:border-neutral-700 text-neutral-350 hover:text-white transition-all flex items-center gap-1.5">
+          class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-neutral-900 border border-neutral-800 hover:border-neutral-700 text-neutral-450 hover:text-emerald-500 transition-all flex items-center gap-1.5">
           <i :data-lucide="trip?.is_public ? 'eye-off' : 'eye'" class="w-3.5 h-3.5"></i>
           <span x-text="trip?.is_public ? 'Make Private' : 'Make Public'"></span>
         </button>
 
         <!-- Dynamic Share Link -->
         <a :href="'shared-trip.html?slug=' + trip?.share_slug" target="_blank" x-show="trip && trip.is_public"
-          class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-emerald-500/10 border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-450 hover:text-emerald-400 transition-all flex items-center gap-1.5">
+          class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-emerald-500/10 border border-emerald-500/30 hover:border-emerald-500/50 text-emerald-600 hover:text-emerald-700 transition-all flex items-center gap-1.5">
           <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
           <span>Share Link</span>
         </a>
@@ -96,28 +118,28 @@
         <!-- Consolidated Tab Buttons -->
         <div class="flex items-center gap-1 bg-neutral-900 border border-neutral-800 p-1 rounded-xl">
           <button @click="setTab('stops')" 
-            :class="activeTab === 'stops' ? 'bg-emerald-500 text-black font-semibold shadow-lg' : 'text-neutral-450 hover:text-white'"
+            :class="activeTab === 'stops' ? 'bg-emerald-500 text-white font-bold shadow-md' : 'text-neutral-450 hover:text-emerald-500'"
             class="px-3.5 py-2 text-xs rounded-lg transition-all flex items-center gap-1.5 font-medium">
             <i data-lucide="compass" class="w-3.5 h-3.5"></i>
             <span class="hidden sm:inline">Stops & Route</span>
             <span class="sm:hidden">Stops</span>
           </button>
           <button @click="setTab('timeline')" 
-            :class="activeTab === 'timeline' ? 'bg-emerald-500 text-black font-semibold shadow-lg' : 'text-neutral-450 hover:text-white'"
+            :class="activeTab === 'timeline' ? 'bg-emerald-500 text-white font-bold shadow-md' : 'text-neutral-450 hover:text-emerald-500'"
             class="px-3.5 py-2 text-xs rounded-lg transition-all flex items-center gap-1.5 font-medium">
             <i data-lucide="list-todo" class="w-3.5 h-3.5"></i>
             <span class="hidden sm:inline">Timeline Planner</span>
             <span class="sm:hidden">Timeline</span>
           </button>
           <button @click="setTab('calendar')" 
-            :class="activeTab === 'calendar' ? 'bg-emerald-500 text-black font-semibold shadow-lg' : 'text-neutral-450 hover:text-white'"
+            :class="activeTab === 'calendar' ? 'bg-emerald-500 text-white font-bold shadow-md' : 'text-neutral-450 hover:text-emerald-500'"
             class="px-3.5 py-2 text-xs rounded-lg transition-all flex items-center gap-1.5 font-medium">
             <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
             <span class="hidden sm:inline">Month Calendar</span>
             <span class="sm:hidden">Calendar</span>
           </button>
           <button @click="setTab('budget')" 
-            :class="activeTab === 'budget' ? 'bg-emerald-500 text-black font-semibold shadow-lg' : 'text-neutral-450 hover:text-white'"
+            :class="activeTab === 'budget' ? 'bg-emerald-500 text-white font-bold shadow-md' : 'text-neutral-450 hover:text-emerald-500'"
             class="px-3.5 py-2 text-xs rounded-lg transition-all flex items-center gap-1.5 font-medium">
             <i data-lucide="wallet" class="w-3.5 h-3.5"></i>
             <span class="hidden sm:inline">Budget & Cost</span>
@@ -133,9 +155,9 @@
       <!-- ================== TAB 1: STOPS & ROUTE BUILDER ================== -->
       <div x-cloak x-show="activeTab === 'stops'" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <!-- Column 1: Manage Stop Form -->
-      <div class="space-y-4 lg:col-span-1">
+      <div class="space-y-4 lg:col-span-1 order-2 lg:order-none">
         <div class="glass-card rounded-2xl border border-neutral-800 p-5 space-y-4">
-          <h2 class="text-sm font-bold text-white flex items-center gap-2">
+          <h2 class="text-sm font-bold text-neutral-100 flex items-center gap-2">
             <i data-lucide="map-pin" class="w-4 h-4 text-emerald-400"></i>
             <span x-text="editingStopId ? 'Edit Destination Details' : 'Add Destination Stop'"></span>
           </h2>
@@ -146,7 +168,7 @@
               <label class="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">Destination City</label>
               <div class="relative">
                 <input id="stop-city-input" type="text" x-model="stopCity" required placeholder="Type city (e.g. Jamnagar, Ahmedabad)"
-                  class="w-full bg-neutral-900 border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all">
+                  class="w-full bg-neutral-900 border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-sm text-neutral-100 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all">
                 <i data-lucide="search" class="w-4 h-4 text-neutral-500 absolute left-3.5 top-3.5"></i>
               </div>
             </div>
@@ -164,13 +186,13 @@
               <div>
                 <label class="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">Arrival Date</label>
                 <input type="date" x-model="stopArrival" required @change="validateStopDates()"
-                  class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all">
+                  class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-xs text-neutral-100 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all">
               </div>
               <!-- Departure -->
               <div>
                 <label class="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">Departure Date</label>
                 <input type="date" x-model="stopDeparture" required @change="validateStopDates()"
-                  class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all">
+                  class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-xs text-neutral-100 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all">
               </div>
             </div>
 
@@ -179,7 +201,7 @@
               <label class="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">Allocated Budget ($)</label>
               <div class="relative">
                 <input type="number" step="0.01" min="0" x-model="stopBudget" required placeholder="0.00" 
-                  class="w-full bg-neutral-900 border border-neutral-800 rounded-xl pl-8 pr-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all">
+                  class="w-full bg-neutral-900 border border-neutral-800 rounded-xl pl-8 pr-4 py-3 text-sm text-neutral-100 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all">
                 <i data-lucide="dollar-sign" class="w-4 h-4 text-neutral-500 absolute left-3.5 top-3.5"></i>
               </div>
             </div>
@@ -210,7 +232,7 @@
       </div>
 
       <!-- Column 2: Stops Timeline -->
-      <div class="space-y-4 lg:col-span-1">
+      <div class="space-y-4 lg:col-span-1 order-3 lg:order-none">
         <!-- Budget Stats Panel -->
         <div class="glass-card rounded-2xl border border-neutral-800/40 p-5 flex items-center justify-between">
           <div class="flex items-center gap-3">
@@ -219,7 +241,7 @@
             </div>
             <div>
               <p class="text-xs text-neutral-400">Total Stops Budget</p>
-              <p class="text-lg font-bold text-white" x-text="'$' + totalAllocatedBudget.toLocaleString(undefined, {minimumFractionDigits: 2})"></p>
+              <p class="text-lg font-bold text-neutral-100" x-text="'$' + totalAllocatedBudget.toLocaleString(undefined, {minimumFractionDigits: 2})"></p>
             </div>
           </div>
           <span class="text-xs px-3 py-1 bg-neutral-800 border border-neutral-700 text-neutral-300 rounded-full" x-text="stops.length + ' stops planned'"></span>
@@ -243,7 +265,7 @@
           <div class="w-12 h-12 rounded-full bg-neutral-900 border border-neutral-850 flex items-center justify-center text-neutral-400 mb-4">
             <i data-lucide="compass" class="w-6 h-6"></i>
           </div>
-          <h3 class="text-lg font-bold text-white mb-1">No destinations mapped</h3>
+          <h3 class="text-lg font-bold text-neutral-100 mb-1">No destinations mapped</h3>
           <p class="text-xs text-neutral-400 max-w-sm mb-4">
             Add your first city stop using the form on the left.
           </p>
@@ -258,7 +280,7 @@
                 <div class="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center font-bold text-sm" x-text="index + 1"></div>
                 <div>
                   <div class="flex items-center gap-2 flex-wrap">
-                    <h3 class="text-base font-bold text-white" x-text="stop.city_name"></h3>
+                    <h3 class="text-base font-bold text-neutral-100" x-text="stop.city_name"></h3>
                     <span class="text-xs text-neutral-455" x-text="stop.country"></span>
                   </div>
                   <p class="text-xs text-neutral-450 mt-0.5 flex items-center gap-1.5">
@@ -337,7 +359,7 @@
       </div>
 
       <!-- Column 3: Route Map & Visuals -->
-      <div class="space-y-4 lg:col-span-1">
+      <div class="space-y-4 lg:col-span-1 order-1 lg:order-none">
         <div class="glass-card rounded-3xl border border-neutral-800 overflow-hidden relative" style="height: 410px;">
           <!-- Map Canvas -->
           <div id="builder-map" class="w-full h-full" style="min-height: 410px;"></div>
@@ -1040,52 +1062,8 @@
     import { getSupabase } from './js/supabase-client.js';
     import { calculateCategoryBreakdown, calculateStopCosts, calculateTripSummary } from './js/budget-calc.js';
 
-    // Obsidian style map style variables
-    const darkMapStyle = [
-      { elementType: "geometry", stylers: [{ color: "#18181b" }] },
-      { elementType: "labels.text.stroke", stylers: [{ color: "#09090b" }] },
-      { elementType: "labels.text.fill", stylers: [{ color: "#a1a1aa" }] },
-      {
-        featureType: "administrative.locality",
-        elementType: "labels.text.fill",
-        stylers: [{ color: "#f4f4f5" }],
-      },
-      {
-        featureType: "poi",
-        elementType: "labels.text.fill",
-        stylers: [{ color: "#10b981" }],
-      },
-      {
-        featureType: "poi.park",
-        elementType: "geometry",
-        stylers: [{ color: "#092415" }],
-      },
-      {
-        featureType: "road",
-        elementType: "geometry",
-        stylers: [{ color: "#27272a" }],
-      },
-      {
-        featureType: "road",
-        elementType: "geometry.stroke",
-        stylers: [{ color: "#18181b" }],
-      },
-      {
-        featureType: "road.highway",
-        elementType: "geometry",
-        stylers: [{ color: "#3f3f46" }],
-      },
-      {
-        featureType: "water",
-        elementType: "geometry",
-        stylers: [{ color: "#09090b" }],
-      },
-      {
-        featureType: "water",
-        elementType: "labels.text.fill",
-        stylers: [{ color: "#71717a" }],
-      }
-    ];
+    // Light/Standard map style variables (defaults to clean light theme)
+    const darkMapStyle = [];
 
     let categoryChartInstance = null;
 
@@ -1467,6 +1445,9 @@
         },
 
         async geocodeAddress(query) {
+          const normalized = query.toLowerCase().trim();
+          
+          // 1. Check hardcoded cache
           const localCache = {
             "paris": { lat: 48.8566, lon: 2.3522 },
             "rome": { lat: 41.9028, lon: 12.4964 },
@@ -1482,23 +1463,44 @@
             "gandhinagar": { lat: 23.2156, lon: 72.6369 }
           };
 
-          const normalized = query.toLowerCase().trim();
           for (const key in localCache) {
             if (normalized.includes(key)) {
               return localCache[key];
             }
           }
 
+          // 2. Check localStorage cache to avoid repeated geocoder calls
+          let dynCache = {};
+          try {
+            dynCache = JSON.parse(localStorage.getItem('globetrotter_geo_cache') || '{}');
+          } catch(e) {}
+          
+          if (dynCache[normalized]) {
+            return dynCache[normalized];
+          }
+
+          // 3. Fallback to Google Geocoder with a small query queue delay
           const geocoder = new google.maps.Geocoder();
           return new Promise((resolve) => {
-            geocoder.geocode({ address: query }, (results, status) => {
-              if (status === 'OK' && results[0]) {
-                const loc = results[0].geometry.location;
-                resolve({ lat: loc.lat(), lon: loc.lng() });
-              } else {
-                resolve(null);
-              }
-            });
+            setTimeout(() => {
+              geocoder.geocode({ address: query }, (results, status) => {
+                if (status === 'OK' && results[0]) {
+                  const loc = results[0].geometry.location;
+                  const coords = { lat: loc.lat(), lon: loc.lng() };
+                  
+                  // Save to dynamic cache
+                  try {
+                    dynCache[normalized] = coords;
+                    localStorage.setItem('globetrotter_geo_cache', JSON.stringify(dynCache));
+                  } catch(e) {}
+                  
+                  resolve(coords);
+                } else {
+                  console.warn(`Geocoding failed for query "${query}": status = ${status}`);
+                  resolve(null);
+                }
+              });
+            }, 300); // 300ms throttle to prevent query limit hit
           });
         },
 

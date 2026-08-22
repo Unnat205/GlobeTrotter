@@ -12,16 +12,38 @@
       theme: {
         extend: {
           fontFamily: {
-            sans: ['Inter', 'sans-serif'],
+            sans: ['var(--font-sans)', 'sans-serif'],
           },
           colors: {
+            emerald: {
+              50: 'var(--color-primary-50)',
+              100: 'var(--color-primary-100)',
+              200: 'var(--color-primary-200)',
+              300: 'var(--color-primary-300)',
+              400: 'var(--color-primary-400)',
+              450: 'var(--color-primary-450)',
+              500: 'var(--color-primary-500)',
+              600: 'var(--color-primary-600)',
+              700: 'var(--color-primary-700)',
+              800: 'var(--color-primary-800)',
+              850: 'var(--color-neutral-850)',
+              900: 'var(--color-neutral-900)',
+            },
             neutral: {
-              950: '#030303',
-              900: '#09090b',
-              850: '#121215',
-              800: '#18181b',
-              700: '#27272a',
-              600: '#3f3f46',
+              950: 'var(--color-neutral-950)',
+              900: 'var(--color-neutral-900)',
+              850: 'var(--color-neutral-850)',
+              800: 'var(--color-neutral-800)',
+              750: 'var(--color-neutral-750)',
+              700: 'var(--color-neutral-700)',
+              650: 'var(--color-neutral-650)',
+              600: 'var(--color-neutral-600)',
+              450: 'var(--color-neutral-450)',
+              400: 'var(--color-neutral-400)',
+              350: 'var(--color-neutral-350)',
+              300: 'var(--color-neutral-300)',
+              200: 'var(--color-neutral-200)',
+              100: 'var(--color-neutral-100)',
             }
           }
         }
@@ -40,8 +62,7 @@
 </head>
 <body class="h-full bg-neutral-950 text-neutral-100 flex flex-col page-fade-in" x-data="authPage" x-init="initPage()">
 
-  <!-- Top Loading Progress Bar -->
-  <div id="top-loading-bar" class="fixed top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 z-50 transition-all ease-out" style="width: 0%; opacity: 0; transition-duration: 0ms;"></div>
+  <div id="top-loading-bar" class="fixed top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-emerald-500 via-amber-400 to-emerald-400 z-50 transition-all ease-out" style="width: 0%; opacity: 0; transition-duration: 0ms;"></div>
 
   <!-- Toast notifications will be injected here by showToast -->
 
@@ -52,22 +73,25 @@
 
     <div class="w-full max-w-md z-10 flex flex-col items-center">
       <!-- Logo -->
-      <div class="flex items-center gap-2 text-3xl font-extrabold tracking-tight mb-8">
-        <i data-lucide="compass" class="w-8 h-8 text-emerald-400"></i>
-        <span>Globe<span class="text-emerald-400">Trotter</span></span>
+      <div class="text-center mb-8">
+        <div class="flex items-center justify-center gap-2.5 text-4xl font-extrabold tracking-tight text-neutral-100 mb-2">
+          <i data-lucide="compass" class="w-10 h-10 text-emerald-500"></i>
+          <span>Globe<span class="text-emerald-500">Trotter</span></span>
+        </div>
+        <p class="text-sm text-neutral-450 font-medium">Your personalized multi-city travel adventure 🗺️✨</p>
       </div>
 
       <!-- Main Login Card -->
       <div class="w-full glass-panel rounded-2xl border border-neutral-800/80 shadow-2xl p-8 relative overflow-hidden">
         
         <!-- Supabase missing alert banner -->
-        <div x-cloak x-show="!isConfigured" class="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-400 text-sm">
+        <div x-cloak x-show="!isConfigured" class="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-600 text-sm">
           <div class="flex gap-2">
             <i data-lucide="alert-circle" class="w-5 h-5 flex-shrink-0"></i>
             <div>
-              <p class="font-semibold">Supabase is not connected</p>
-              <p class="text-xs text-neutral-300 mt-1">Please click the Database button to enter your connection credentials.</p>
-              <button @click="openSetup()" class="mt-2 text-xs font-semibold px-3 py-1.5 bg-amber-400 text-black rounded-lg hover:bg-amber-300 transition-colors">
+              <p class="font-semibold text-neutral-100">Supabase is not connected</p>
+              <p class="text-xs text-neutral-450 mt-1">Please click the Database button to enter your connection credentials.</p>
+              <button @click="openSetup()" class="mt-2 text-xs font-semibold px-3 py-1.5 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors">
                 Configure DB Connection
               </button>
             </div>
@@ -76,7 +100,7 @@
 
         <!-- Connection Settings Widget Floating Icon -->
         <div class="absolute top-4 right-4">
-          <button @click="openSetup()" class="p-2 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-white transition-colors" title="Settings">
+          <button @click="openSetup()" class="p-2 hover:bg-neutral-850 rounded-lg text-neutral-450 hover:text-emerald-500 transition-colors" title="Settings">
             <i data-lucide="settings" class="w-4 h-4"></i>
           </button>
         </div>
@@ -84,12 +108,12 @@
         <!-- Switch Tabs -->
         <div class="flex border-b border-neutral-800 mb-6">
           <button @click="tab = 'login'" 
-            :class="tab === 'login' ? 'border-b-2 border-emerald-400 text-white font-semibold' : 'text-neutral-400 hover:text-neutral-200'"
+            :class="tab === 'login' ? 'border-b-2 border-emerald-500 text-neutral-100 font-semibold' : 'text-neutral-450 hover:text-emerald-500'"
             class="flex-1 pb-3 text-sm transition-all focus:outline-none">
             Sign In
           </button>
           <button @click="tab = 'signup'" 
-            :class="tab === 'signup' ? 'border-b-2 border-emerald-400 text-white font-semibold' : 'text-neutral-400 hover:text-neutral-200'"
+            :class="tab === 'signup' ? 'border-b-2 border-emerald-500 text-neutral-100 font-semibold' : 'text-neutral-450 hover:text-emerald-500'"
             class="flex-1 pb-3 text-sm transition-all focus:outline-none">
             Register
           </button>

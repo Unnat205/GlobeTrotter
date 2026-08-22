@@ -11,16 +11,38 @@
       theme: {
         extend: {
           fontFamily: {
-            sans: ['Inter', 'sans-serif'],
+            sans: ['var(--font-sans)', 'sans-serif'],
           },
           colors: {
+            emerald: {
+              50: 'var(--color-primary-50)',
+              100: 'var(--color-primary-100)',
+              200: 'var(--color-primary-200)',
+              300: 'var(--color-primary-300)',
+              400: 'var(--color-primary-400)',
+              450: 'var(--color-primary-450)',
+              500: 'var(--color-primary-500)',
+              600: 'var(--color-primary-600)',
+              700: 'var(--color-primary-700)',
+              800: 'var(--color-primary-800)',
+              850: 'var(--color-neutral-850)',
+              900: 'var(--color-neutral-900)',
+            },
             neutral: {
-              950: '#030303',
-              900: '#09090b',
-              850: '#121215',
-              800: '#18181b',
-              700: '#27272a',
-              600: '#3f3f46',
+              950: 'var(--color-neutral-950)',
+              900: 'var(--color-neutral-900)',
+              850: 'var(--color-neutral-850)',
+              800: 'var(--color-neutral-800)',
+              750: 'var(--color-neutral-750)',
+              700: 'var(--color-neutral-700)',
+              650: 'var(--color-neutral-650)',
+              600: 'var(--color-neutral-600)',
+              450: 'var(--color-neutral-450)',
+              400: 'var(--color-neutral-400)',
+              350: 'var(--color-neutral-350)',
+              300: 'var(--color-neutral-300)',
+              200: 'var(--color-neutral-200)',
+              100: 'var(--color-neutral-100)',
             }
           }
         }
@@ -43,12 +65,13 @@
   <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 relative pb-24" x-cloak x-show="authorized">
     
     <!-- Large Hero Banner Image (Screen 3) -->
-    <div class="relative rounded-3xl overflow-hidden mb-8 border border-neutral-800 shadow-2xl h-56 md:h-64">
-      <img src="https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1200&q=80" alt="Scenic Travel Banner" class="w-full h-full object-cover brightness-[0.5]">
-      <div class="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/20 to-transparent"></div>
+    <div class="relative rounded-3xl overflow-hidden mb-8 border border-neutral-800/40 shadow-xl h-56 md:h-64">
+      <img src="https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1200&q=80" alt="Scenic Travel Banner" class="w-full h-full object-cover">
+      <!-- Dark image overlay for high contrast text readability -->
+      <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent"></div>
       <div class="absolute inset-0 flex flex-col justify-end p-6 md:p-8">
-        <h1 class="text-3xl md:text-4xl font-black tracking-tight text-white">Adventure Dashboard</h1>
-        <p class="text-xs md:text-sm text-neutral-300 max-w-md mt-1.5 leading-relaxed">
+        <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-white drop-shadow-md">Adventure Dashboard</h1>
+        <p class="text-xs md:text-sm text-neutral-200 max-w-md mt-1.5 leading-relaxed drop-shadow">
           Create, schedule, and analyze budgets for your multi-city journeys across the globe.
         </p>
       </div>
@@ -58,38 +81,38 @@
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
       <div class="glass-card rounded-2xl p-6 border border-neutral-800/40">
         <div class="flex justify-between items-center">
-          <span class="text-xs font-semibold uppercase tracking-wider text-neutral-400">Total Trips</span>
-          <div class="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg">
+          <span class="text-xs font-semibold uppercase tracking-wider text-neutral-450">Total Trips</span>
+          <div class="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg">
             <i data-lucide="map" class="w-5 h-5"></i>
           </div>
         </div>
         <div class="mt-2 flex items-baseline gap-2">
-          <span class="text-3xl font-bold text-white" x-text="stats.totalTrips">0</span>
-          <span class="text-xs text-neutral-500">adventures</span>
+          <span class="text-3xl font-extrabold text-neutral-100" x-text="stats.totalTrips">0</span>
+          <span class="text-xs text-neutral-450 font-medium">adventures</span>
         </div>
       </div>
       <div class="glass-card rounded-2xl p-6 border border-neutral-800/40">
         <div class="flex justify-between items-center">
-          <span class="text-xs font-semibold uppercase tracking-wider text-neutral-400">Destinations</span>
-          <div class="p-2 bg-blue-500/10 text-blue-400 rounded-lg">
+          <span class="text-xs font-semibold uppercase tracking-wider text-neutral-450">Destinations</span>
+          <div class="p-2 bg-blue-500/10 text-blue-500 rounded-lg">
             <i data-lucide="globe" class="w-5 h-5"></i>
           </div>
         </div>
         <div class="mt-2 flex items-baseline gap-2">
-          <span class="text-3xl font-bold text-white" x-text="stats.totalCities">0</span>
-          <span class="text-xs text-neutral-500">cities mapped</span>
+          <span class="text-3xl font-extrabold text-neutral-100" x-text="stats.totalCities">0</span>
+          <span class="text-xs text-neutral-450 font-medium">cities mapped</span>
         </div>
       </div>
       <div class="glass-card rounded-2xl p-6 border border-neutral-800/40">
         <div class="flex justify-between items-center">
-          <span class="text-xs font-semibold uppercase tracking-wider text-neutral-400">Allocated Budget</span>
-          <div class="p-2 bg-purple-500/10 text-purple-400 rounded-lg">
+          <span class="text-xs font-semibold uppercase tracking-wider text-neutral-450">Allocated Budget</span>
+          <div class="p-2 bg-purple-500/10 text-purple-500 rounded-lg">
             <i data-lucide="dollar-sign" class="w-5 h-5"></i>
           </div>
         </div>
         <div class="mt-2 flex items-baseline gap-2">
-          <span class="text-3xl font-bold text-white" x-text="'$' + stats.totalBudget.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})">0.00</span>
-          <span class="text-xs text-neutral-500">across stops</span>
+          <span class="text-3xl font-extrabold text-neutral-100" x-text="'$' + stats.totalBudget.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})">0.00</span>
+          <span class="text-xs text-neutral-450 font-medium">across stops</span>
         </div>
       </div>
     </div>
@@ -100,8 +123,8 @@
       <!-- Search Input -->
       <div class="relative flex-grow max-w-md">
         <input type="text" x-model="searchQuery" placeholder="Search trips by name..."
-          class="w-full bg-neutral-900 border border-neutral-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-emerald-500/50">
-        <i data-lucide="search" class="w-4 h-4 text-neutral-500 absolute left-3.5 top-3"></i>
+          class="w-full bg-neutral-900 border border-neutral-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-neutral-100 placeholder-neutral-450 focus:outline-none focus:border-emerald-500/50">
+        <i data-lucide="search" class="w-4 h-4 text-neutral-450 absolute left-3.5 top-3"></i>
       </div>
 
       <!-- Controls Buttons Group -->
@@ -109,7 +132,7 @@
         
         <!-- Group by status (Screen 6 categories) -->
         <button @click="toggleGrouping()" 
-          :class="isGrouped ? 'border-emerald-500/40 text-emerald-400 bg-emerald-500/5' : 'border-neutral-800 text-neutral-400 hover:text-white'"
+          :class="isGrouped ? 'border-emerald-500 text-emerald-500 bg-emerald-50' : 'border-neutral-800 text-neutral-450 hover:text-emerald-500'"
           class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-neutral-900 border transition-all flex items-center gap-1.5">
           <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
           <span x-text="isGrouped ? 'Grouped by Status' : 'Group by'"></span>
@@ -118,29 +141,29 @@
         <!-- Filter -->
         <div class="relative" x-data="{ open: false }">
           <button @click="open = !open" 
-            :class="filterStatus !== 'all' ? 'border-emerald-500/40 text-emerald-400 bg-emerald-500/5' : 'border-neutral-800 text-neutral-400 hover:text-white'"
+            :class="filterStatus !== 'all' ? 'border-emerald-500 text-emerald-500 bg-emerald-50' : 'border-neutral-800 text-neutral-450 hover:text-emerald-500'"
             class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-neutral-900 border transition-all flex items-center gap-1.5">
             <i data-lucide="filter" class="w-3.5 h-3.5"></i>
             <span x-text="filterStatus === 'all' ? 'Filter' : (filterStatus === 'public' ? 'Public Only' : 'Private Only')"></span>
           </button>
-          <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 mt-2 w-40 rounded-xl border border-neutral-800 bg-neutral-950/95 shadow-2xl p-1 z-30">
-            <button @click="filterStatus = 'all'; open = false" class="w-full text-left px-3 py-2 text-xs hover:bg-neutral-900 rounded-lg text-neutral-300">All Visibility</button>
-            <button @click="filterStatus = 'public'; open = false" class="w-full text-left px-3 py-2 text-xs hover:bg-neutral-900 rounded-lg text-neutral-300">Public Only</button>
-            <button @click="filterStatus = 'private'; open = false" class="w-full text-left px-3 py-2 text-xs hover:bg-neutral-900 rounded-lg text-neutral-300">Private Only</button>
+          <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 mt-2 w-40 rounded-xl border border-neutral-800 bg-neutral-900 shadow-2xl p-1 z-30">
+            <button @click="filterStatus = 'all'; open = false" class="w-full text-left px-3 py-2 text-xs hover:bg-neutral-850 rounded-lg text-neutral-100">All Visibility</button>
+            <button @click="filterStatus = 'public'; open = false" class="w-full text-left px-3 py-2 text-xs hover:bg-neutral-850 rounded-lg text-neutral-100">Public Only</button>
+            <button @click="filterStatus = 'private'; open = false" class="w-full text-left px-3 py-2 text-xs hover:bg-neutral-850 rounded-lg text-neutral-100">Private Only</button>
           </div>
         </div>
 
         <!-- Sort by -->
         <div class="relative" x-data="{ open: false }">
           <button @click="open = !open" 
-            class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white transition-all flex items-center gap-1.5">
-            <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-neutral-400"></i>
+            class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-450 hover:text-emerald-500 transition-all flex items-center gap-1.5">
+            <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-neutral-450"></i>
             <span x-text="'Sort: ' + sortByLabel"></span>
           </button>
-          <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 mt-2 w-40 rounded-xl border border-neutral-800 bg-neutral-950/95 shadow-2xl p-1 z-30">
-            <button @click="sortBy = 'newest'; sortByLabel = 'Newest'; open = false" class="w-full text-left px-3 py-2 text-xs hover:bg-neutral-900 rounded-lg text-neutral-300">Newest</button>
-            <button @click="sortBy = 'oldest'; sortByLabel = 'Oldest'; open = false" class="w-full text-left px-3 py-2 text-xs hover:bg-neutral-900 rounded-lg text-neutral-300">Oldest</button>
-            <button @click="sortBy = 'name'; sortByLabel = 'Trip Name'; open = false" class="w-full text-left px-3 py-2 text-xs hover:bg-neutral-900 rounded-lg text-neutral-300">Trip Name</button>
+          <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 mt-2 w-40 rounded-xl border border-neutral-800 bg-neutral-900 shadow-2xl p-1 z-30">
+            <button @click="sortBy = 'newest'; sortByLabel = 'Newest'; open = false" class="w-full text-left px-3 py-2 text-xs hover:bg-neutral-850 rounded-lg text-neutral-100">Newest</button>
+            <button @click="sortBy = 'oldest'; sortByLabel = 'Oldest'; open = false" class="w-full text-left px-3 py-2 text-xs hover:bg-neutral-850 rounded-lg text-neutral-100">Oldest</button>
+            <button @click="sortBy = 'name'; sortByLabel = 'Trip Name'; open = false" class="w-full text-left px-3 py-2 text-xs hover:bg-neutral-850 rounded-lg text-neutral-100">Trip Name</button>
           </div>
         </div>
 
@@ -149,25 +172,25 @@
 
     <!-- Top Regional Selections (Screen 3 Slider/Carousel) -->
     <div class="mb-8">
-      <h2 class="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-3 flex items-center gap-1.5">
-        <i data-lucide="compass" class="w-4 h-4 text-emerald-400"></i>
+      <h2 class="text-xs font-semibold uppercase tracking-wider text-neutral-450 mb-3 flex items-center gap-1.5">
+        <i data-lucide="compass" class="w-4 h-4 text-emerald-500"></i>
         <span>Top Regional Selections</span>
       </h2>
       <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <template x-for="r in regions">
           <button @click="selectRegion(r.name)" 
-            :class="selectedRegion === r.name ? 'border-emerald-500 scale-[1.02] bg-neutral-900' : 'border-neutral-850 bg-neutral-950/60 hover:border-neutral-800'"
+            :class="selectedRegion === r.name ? 'border-emerald-500 scale-[1.02] bg-emerald-50 text-emerald-600 shadow-sm' : 'border-neutral-800 bg-neutral-900 hover:border-neutral-700 text-neutral-100'"
             class="rounded-xl p-3 border transition-all flex flex-col items-center justify-center text-center gap-2">
-            <div :class="selectedRegion === r.name ? 'bg-emerald-500/25 text-emerald-400' : 'bg-neutral-900 text-neutral-400'" class="w-10 h-10 rounded-lg flex items-center justify-center">
+            <div :class="selectedRegion === r.name ? 'bg-emerald-500 text-white' : 'bg-neutral-850 text-neutral-450'" class="w-10 h-10 rounded-lg flex items-center justify-center transition-colors">
               <i :data-lucide="r.icon" class="w-5 h-5"></i>
             </div>
-            <span class="text-xs font-bold text-white" x-text="r.name"></span>
+            <span class="text-xs font-bold text-neutral-100" x-text="r.name"></span>
           </button>
         </template>
       </div>
       <div x-show="selectedRegion" class="mt-3 flex justify-between items-center">
-        <span class="text-xs text-neutral-400">Filtering trips by region: <strong class="text-white" x-text="selectedRegion"></strong></span>
-        <button @click="selectedRegion = null" class="text-[10px] text-emerald-450 hover:underline">Clear Region Filter</button>
+        <span class="text-xs text-neutral-450">Filtering trips by region: <strong class="text-neutral-100 font-bold" x-text="selectedRegion"></strong></span>
+        <button @click="selectedRegion = null" class="text-[10px] font-bold text-emerald-500 hover:underline">Clear Region Filter</button>
       </div>
     </div>
 
@@ -231,37 +254,35 @@
                       </button>
                     </div>
                   </div>
-                </div>
-
-                <!-- Detail Body -->
+                </div>                <!-- Detail Body -->
                 <div class="p-5 flex-grow flex flex-col justify-between">
                   <div>
-                    <h3 class="text-lg font-bold text-white line-clamp-1" x-text="trip.name"></h3>
-                    <p class="text-xs text-neutral-400 mt-1 flex items-center gap-1.5">
+                    <h3 class="text-lg font-bold text-neutral-100 line-clamp-1" x-text="trip.name"></h3>
+                    <p class="text-xs text-neutral-450 mt-1 flex items-center gap-1.5 font-medium">
                       <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
                       <span x-text="formatDateRange(trip.start_date, trip.end_date)"></span>
                     </p>
-                    <p class="text-sm text-neutral-300 mt-3 line-clamp-2" x-text="trip.description || 'No description provided.'"></p>
+                    <p class="text-sm text-neutral-450 mt-3 line-clamp-2 leading-relaxed" x-text="trip.description || 'No description provided.'"></p>
                   </div>
 
                     <div class="grid grid-cols-3 gap-1.5 mt-5">
                       <a :href="'workspace.html?tripId=' + trip.id + '&tab=stops'" 
-                        class="flex items-center justify-center gap-1.5 py-2 bg-neutral-900 hover:bg-neutral-800 border border-neutral-850 hover:border-neutral-700 text-[10px] font-semibold text-neutral-250 rounded-lg transition-all" title="Manage Stops">
-                        <i data-lucide="map-pin" class="w-3.5 h-3.5 text-emerald-400"></i> Stops
+                        class="flex items-center justify-center gap-1.5 py-2 bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 hover:border-neutral-700 text-[10px] font-semibold text-neutral-100 rounded-lg transition-all" title="Manage Stops">
+                        <i data-lucide="map-pin" class="w-3.5 h-3.5 text-emerald-500"></i> Stops
                       </a>
                       <a :href="'workspace.html?tripId=' + trip.id + '&tab=timeline'" 
-                        class="flex items-center justify-center gap-1.5 py-2 bg-neutral-900 hover:bg-neutral-800 border border-neutral-850 hover:border-neutral-700 text-[10px] font-semibold text-neutral-250 rounded-lg transition-all" title="Manage Activities">
-                        <i data-lucide="list-todo" class="w-3.5 h-3.5 text-blue-400"></i> Schedule
+                        class="flex items-center justify-center gap-1.5 py-2 bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 hover:border-neutral-700 text-[10px] font-semibold text-neutral-100 rounded-lg transition-all" title="Manage Activities">
+                        <i data-lucide="list-todo" class="w-3.5 h-3.5 text-blue-500"></i> Schedule
                       </a>
                       <a :href="'workspace.html?tripId=' + trip.id + '&tab=budget'" 
-                        class="flex items-center justify-center gap-1.5 py-2 bg-neutral-900 hover:bg-neutral-800 border border-neutral-850 hover:border-neutral-700 text-[10px] font-semibold text-neutral-250 rounded-lg transition-all" title="Budget Analytics">
-                        <i data-lucide="pie-chart" class="w-3.5 h-3.5 text-purple-400"></i> Budget
+                        class="flex items-center justify-center gap-1.5 py-2 bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 hover:border-neutral-700 text-[10px] font-semibold text-neutral-100 rounded-lg transition-all" title="Budget Analytics">
+                        <i data-lucide="pie-chart" class="w-3.5 h-3.5 text-purple-500"></i> Budget
                       </a>
                     </div>
 
                     <div class="mt-4 pt-4 border-t border-neutral-800/40 flex items-center justify-between" x-show="trip.is_public">
-                      <span class="text-[10px] uppercase font-semibold text-neutral-500 tracking-wider">Share Link</span>
-                      <button @click="copyShareLink(trip.share_slug)" class="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1">
+                      <span class="text-[10px] uppercase font-semibold text-neutral-450 tracking-wider">Share Link</span>
+                      <button @click="copyShareLink(trip.share_slug)" class="text-xs font-semibold text-emerald-500 hover:underline flex items-center gap-1">
                         <i data-lucide="copy" class="w-3 h-3"></i> Copy Link
                       </button>
                     </div>
@@ -282,34 +303,34 @@
           <div class="h-44 overflow-hidden relative bg-neutral-900 border-b border-neutral-800/40">
             <img :src="trip.cover_photo_url" :alt="trip.name" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
             
-            <span :class="trip.is_public ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-neutral-800/80 text-neutral-300 border-neutral-700'"
+            <span :class="trip.is_public ? 'bg-emerald-500/20 text-emerald-600 border-emerald-500/30' : 'bg-neutral-800/80 text-neutral-300 border-neutral-700'"
               class="absolute top-4 left-4 text-xs font-semibold px-2.5 py-1 rounded-full border backdrop-blur-md flex items-center gap-1.5">
               <i :data-lucide="trip.is_public ? 'globe' : 'lock'" class="w-3.5 h-3.5"></i>
               <span x-text="trip.is_public ? 'Public' : 'Private'"></span>
             </span>
- 
+
             <div class="absolute top-4 right-4" x-data="{ open: false }">
-              <button @click.prevent="open = !open" class="p-2 bg-neutral-900/80 hover:bg-neutral-900 border border-neutral-700/50 rounded-lg text-white backdrop-blur-md transition-colors">
+              <button @click.prevent="open = !open" class="p-2 bg-neutral-900/80 hover:bg-neutral-900 border border-neutral-700/50 rounded-lg text-neutral-100 backdrop-blur-md transition-colors">
                 <i data-lucide="more-vertical" class="w-4 h-4"></i>
               </button>
-              <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 mt-1 w-36 rounded-xl border border-neutral-800 bg-neutral-950/95 shadow-2xl p-1 z-20">
-                <button @click="deleteTripHandler(trip.id)" class="w-full flex items-center gap-2 px-3 py-2 text-xs text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors text-left">
+              <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 mt-1 w-36 rounded-xl border border-neutral-800 bg-neutral-900 shadow-2xl p-1 z-20">
+                <button @click="deleteTripHandler(trip.id)" class="w-full flex items-center gap-2 px-3 py-2 text-xs text-rose-500 hover:bg-rose-50 rounded-lg transition-colors text-left font-medium">
                   <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete Trip
                 </button>
               </div>
             </div>
           </div>
- 
+
           <!-- Trip details -->
           <div class="p-5 flex-grow flex flex-col justify-between">
             <div>
-              <h3 class="text-lg font-bold text-white line-clamp-1" x-text="trip.name">Trip Name</h3>
-              <p class="text-xs text-neutral-400 mt-1 flex items-center gap-1.5">
+              <h3 class="text-lg font-bold text-neutral-100 line-clamp-1" x-text="trip.name">Trip Name</h3>
+              <p class="text-xs text-neutral-450 mt-1 flex items-center gap-1.5 font-medium">
                 <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
                 <span x-text="formatDateRange(trip.start_date, trip.end_date)">Date Range</span>
               </p>
-              <p class="text-sm text-neutral-300 mt-3 line-clamp-2" x-text="trip.description || 'No description provided.'"></p>
-            </div>
+              <p class="text-sm text-neutral-450 mt-3 line-clamp-2 leading-relaxed" x-text="trip.description || 'No description provided.'"></p>
+            </div>v>
  
             <div>
               <div class="grid grid-cols-3 gap-1.5 mt-5">

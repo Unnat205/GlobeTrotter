@@ -84,7 +84,7 @@ export async function createTrip(tripData) {
     start_date: tripData.start_date,
     end_date: tripData.end_date,
     description: tripData.description || '',
-    cover_photo_url: tripData.cover_photo_url || 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=800&q=80',
+    cover_photo_url: tripData.cover_photo_url || `https://images.unsplash.com/featured/800x600/?travel,adventure,${encodeURIComponent(tripData.name)}`,
     is_public: !!tripData.is_public,
     share_slug: slug
   };
