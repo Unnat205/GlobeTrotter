@@ -7,15 +7,27 @@ const DEFAULT_GOOGLE_MAPS_KEY = (typeof window !== 'undefined' && window.ENV_CON
 
 export const config = {
   getSupabaseUrl() {
-    return localStorage.getItem("GLOBETROTTER_SUPABASE_URL") || (typeof window !== 'undefined' && window.ENV_CONFIG?.SUPABASE_URL) || DEFAULT_SUPABASE_URL;
+    return (typeof window !== 'undefined' && window.ENV_CONFIG?.SUPABASE_URL) || localStorage.getItem("GLOBETROTTER_SUPABASE_URL") || "https://jukfxajspatnwqahsvja.supabase.co";
   },
 
   getSupabaseAnonKey() {
-    return localStorage.getItem("GLOBETROTTER_SUPABASE_ANON_KEY") || (typeof window !== 'undefined' && window.ENV_CONFIG?.SUPABASE_ANON_KEY) || DEFAULT_SUPABASE_ANON_KEY;
+    return (typeof window !== 'undefined' && window.ENV_CONFIG?.SUPABASE_ANON_KEY) || localStorage.getItem("GLOBETROTTER_SUPABASE_ANON_KEY") || "";
   },
 
   getGoogleMapsKey() {
-    return localStorage.getItem("GLOBETROTTER_GOOGLE_MAPS_KEY") || (typeof window !== 'undefined' && window.ENV_CONFIG?.GOOGLE_MAPS_KEY) || DEFAULT_GOOGLE_MAPS_KEY;
+    return (typeof window !== 'undefined' && window.ENV_CONFIG?.GOOGLE_MAPS_KEY) || localStorage.getItem("GLOBETROTTER_GOOGLE_MAPS_KEY") || "";
+  },
+
+  getGeminiApiKey() {
+    return (typeof window !== 'undefined' && window.ENV_CONFIG?.GEMINI_API_KEY) || localStorage.getItem("GLOBETROTTER_GEMINI_API_KEY") || "";
+  },
+
+  getGeminiModel() {
+    return (typeof window !== 'undefined' && window.ENV_CONFIG?.GEMINI_MODEL) || localStorage.getItem("GLOBETROTTER_GEMINI_MODEL") || "gemini-2.5-flash";
+  },
+
+  getPollinationsApiKey() {
+    return (typeof window !== 'undefined' && window.ENV_CONFIG?.POLLINATIONS_API_KEY) || localStorage.getItem("GLOBETROTTER_POLLINATIONS_API_KEY") || "";
   },
 
   setGoogleMapsKey(key) {

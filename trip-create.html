@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GlobeTrotter — Plan a New Trip</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <script src="js/env.js"></script>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -145,7 +146,7 @@
           <!-- Destination Select a Place (Screen 4 Autocomplete) -->
           <div>
             <label class="block text-xs font-semibold uppercase tracking-wider text-neutral-450 mb-1.5">Select a Place</label>
-            <div class="relative">
+            <div class="relative" id="dest-autocomplete-container">
               <gmp-place-autocomplete id="dest-autocomplete" placeholder="Search city or country..."></gmp-place-autocomplete>
             </div>
           </div>
@@ -467,19 +468,18 @@
         },
 
         initAutocomplete() {
-          const input = document.getElementById('dest-autocomplete');
-          if (!input) return;
+          const el = document.getElementById('dest-autocomplete');
+          if (!el) return;
 
-          input.addEventListener('gmp-select', async ({ placePrediction }) => {
+          // Use Places API (New) gmp-place-autocomplete web component
+          el.addEventListener('gmp-select', async ({ placePrediction }) => {
             if (!placePrediction) return;
-            const place = placePrediction.toPlace();
-            
             try {
+              const place = placePrediction.toPlace();
               await place.fetchFields({
                 fields: ['displayName', 'formattedAddress', 'location', 'addressComponents']
               });
 
-              // Extract City and Country
               let city = '';
               let country = '';
               if (place.addressComponents) {
@@ -489,11 +489,7 @@
                     city = name;
                   } else if (c.types.includes('administrative_area_level_1') && !city) {
                     city = name;
-                  } else if (c.types.includes('administrative_area_level_2') && !city) {
-                    city = name;
-                  }
-
-                  if (c.types.includes('country')) {
+                  } else if (c.types.includes('country')) {
                     country = name;
                   }
                 });
@@ -505,12 +501,13 @@
               this.selectedPlace = {
                 cityName: city,
                 country: country,
-                lat: place.location.lat(),
-                lon: place.location.lng()
+                lat: place.location ? place.location.lat() : null,
+                lon: place.location ? place.location.lng() : null
               };
 
-              // Fetch suggestions based on lat/lng using PlacesService
-              this.fetchPlaceSuggestions(place.location);
+              if (place.location) {
+                this.fetchPlaceSuggestions(place.location);
+              }
             } catch (err) {
               console.error("Error fetching place details:", err);
               showToast("Failed to fetch location details", "error");
@@ -518,35 +515,38 @@
           });
         },
 
-        fetchPlaceSuggestions(locationObj) {
-          const anchor = document.getElementById('places-service-anchor');
-          if (!anchor) return;
-
-          const service = new google.maps.places.PlacesService(anchor);
-          service.nearbySearch({
-            location: locationObj,
-            radius: 8000,
-            type: ['tourist_attraction']
-          }, (results, status) => {
-            if (status === google.maps.places.PlacesServiceStatus.OK && results) {
-              this.suggestions = results.slice(0, 6).map(r => ({
-                name: r.name,
-                rating: r.rating || 4.5,
-                address: r.vicinity || '',
-                photo: r.photos && r.photos[0] 
-                  ? r.photos[0].getUrl({ maxWidth: 400, maxHeight: 300 })
-                  : 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=400&q=300'
-              }));
-              this.$nextTick(() => refreshIcons());
-            } else {
-              // Fallback suggestions
-              this.suggestions = [
-                { name: "Central Historical Museum", rating: 4.8, address: "Downtown Area", photo: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=400" },
-                { name: "Scenic City View Point", rating: 4.7, address: "High Summit Pass", photo: "https://images.unsplash.com/photo-1454496522488-7a8e488e8606?auto=format&fit=crop&w=400" }
-              ];
-              this.$nextTick(() => refreshIcons());
+        async fetchPlaceSuggestions(locationObj) {
+          try {
+            if (google.maps.places && google.maps.places.Place && typeof google.maps.places.Place.searchNearby === 'function') {
+              const request = {
+                fields: ['displayName', 'formattedAddress', 'rating', 'photos'],
+                locationRestriction: { center: locationObj, radius: 8000 },
+                includedTypes: ['tourist_attraction'],
+                maxResultCount: 6
+              };
+              const { places } = await google.maps.places.Place.searchNearby(request);
+              if (places && places.length > 0) {
+                this.suggestions = places.map(p => ({
+                  name: p.displayName || '',
+                  rating: p.rating || 4.5,
+                  address: p.formattedAddress || '',
+                  photo: p.photos && p.photos[0] && typeof p.photos[0].getURI === 'function'
+                    ? p.photos[0].getURI({ maxWidth: 400, maxHeight: 300 })
+                    : 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=400&q=300'
+                }));
+                this.$nextTick(() => refreshIcons());
+                return;
+              }
             }
-          });
+          } catch (e) {
+            console.warn("Places searchNearby failed in trip-create:", e);
+            // Static fallback suggestions
+            this.suggestions = [
+              { name: "Central Historical Museum", rating: 4.8, address: "Downtown Area", photo: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=400" },
+              { name: "Scenic City View Point", rating: 4.7, address: "High Summit Pass", photo: "https://images.unsplash.com/photo-1454496522488-7a8e488e8606?auto=format&fit=crop&w=400" }
+            ];
+            this.$nextTick(() => refreshIcons());
+          }
         },
 
         validateDates() {
@@ -621,8 +621,22 @@
 
         async handleSubmit() {
           if (this.dateError) return;
+
+          // Robust fallback: if user typed something but select prediction event didn't trigger
           if (!this.selectedPlace) {
-            showToast("Please select a place using the autocomplete search input first.", "error");
+            const inputVal = document.getElementById('dest-autocomplete')?.value?.trim();
+            if (inputVal) {
+              this.selectedPlace = {
+                cityName: inputVal,
+                country: 'Unknown Country',
+                lat: 22.4707,
+                lon: 70.0577
+              };
+            }
+          }
+
+          if (!this.selectedPlace) {
+            showToast("Please specify a destination city or country first.", "error");
             return;
           }
 

@@ -64,6 +64,7 @@ export const showToast = (message, type = 'success') => {
   const isSuccess = type === 'success';
   const isError = type === 'error';
 
+  const toast = document.createElement('div');
   toast.className = `animate-slide-in flex items-center justify-between p-3.5 rounded-2xl border shadow-2xl transition-all duration-300 bg-neutral-900 ${
     isSuccess
       ? 'border-emerald-500/40'
@@ -73,29 +74,33 @@ export const showToast = (message, type = 'success') => {
   }`;
 
   const iconName = isSuccess ? 'check-circle' : isError ? 'alert-circle' : 'info';
+  const iconColor = isSuccess ? 'text-emerald-450' : isError ? 'text-rose-450' : 'text-blue-450';
 
   toast.innerHTML = `
-    <div class="flex items-center gap-3 pr-2">
-      <div class="p-1.5 rounded-xl ${isSuccess ? 'bg-emerald-500/10 text-emerald-400' : isError ? 'bg-rose-500/10 text-rose-400' : 'bg-blue-500/10 text-blue-400'}">
-        <i data-lucide="${iconName}" class="w-4 h-4 flex-shrink-0"></i>
+    <div class="flex items-center gap-3">
+      <div class="${iconColor}">
+        <i data-lucide="${iconName}" class="w-5 h-5"></i>
       </div>
-      <span class="text-xs font-semibold text-neutral-100 leading-snug">${message}</span>
+      <p class="text-xs font-semibold text-neutral-100">${message}</p>
     </div>
-    <button class="ml-3 p-1 rounded-lg text-neutral-450 hover:text-neutral-100 hover:bg-neutral-850 transition-colors" onclick="this.parentElement.remove()">
-      <i data-lucide="x" class="w-3.5 h-3.5"></i>
+    <button onclick="this.parentElement.remove()" class="text-neutral-500 hover:text-neutral-300 transition-colors ml-3">
+      <i data-lucide="x" class="w-4 h-4"></i>
     </button>
   `;
 
   container.appendChild(toast);
   refreshIcons();
 
-  // Auto-remove after 4 seconds
   setTimeout(() => {
-    toast.classList.remove('animate-slide-in');
     toast.classList.add('opacity-0', 'translate-y-2');
     setTimeout(() => toast.remove(), 300);
   }, 4000);
 };
+
+// Global window binding so Alpine expressions can call showToast cleanly
+if (typeof window !== 'undefined') {
+  window.showToast = showToast;
+}
 
 // --- LUCIDE ICON REFRESHER ---
 export function refreshIcons() {
@@ -171,7 +176,7 @@ export async function loadNavbar() {
         <!-- User Dropdown Trigger -->
         <div class="relative" x-data="{ open: false }">
           <button @click="open = !open" class="flex items-center gap-2 hover:opacity-90 focus:outline-none transition-opacity bg-neutral-850/60 hover:bg-neutral-850 border border-neutral-800/80 rounded-full py-1 px-1.5 pl-2.5">
-            <span class="text-xs font-semibold text-neutral-300 max-w-[100px] truncate hidden md:inline" x-text="user?.email?.split('@')[0] || 'Account'"></span>
+            <span class="text-xs font-semibold text-neutral-300 max-w-[100px] truncate hidden md:inline">${user.email ? user.email.split('@')[0] : 'Account'}</span>
             <img src="${avatar}" alt="Avatar" class="w-7 h-7 rounded-full border border-neutral-700 object-cover" onerror="this.outerHTML='<div class=\'w-7 h-7 rounded-full bg-emerald-500/20 text-emerald-500 flex items-center justify-center font-bold text-xs\'>${initials}</div>'">
             <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-neutral-450 pr-1"></i>
           </button>
