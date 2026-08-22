@@ -2666,10 +2666,21 @@
           this.aiInputPrompt = '';
           this.aiLoading = true;
 
-          this.$nextTick(() => {
+          const scrollChat = () => {
             const container = document.getElementById('ai-chat-container');
             if (container) container.scrollTop = container.scrollHeight;
-          });
+          };
+
+          this.$nextTick(scrollChat);
+
+          // Add streaming assistant placeholder message
+          const assistantMsg = {
+            role: 'assistant',
+            text: 'Thinking...',
+            actions: [],
+            searchGroundingUsed: false
+          };
+          this.aiMessages.push(assistantMsg);
 
           try {
             const response = await aiPlanner.generateResponse(prompt, {
@@ -2678,31 +2689,39 @@
               selectedStop: this.selectedStop,
               selectedDay: this.selectedDay,
               activities: this.activities
+            }, (chunkText) => {
+              const lastMsg = this.aiMessages[this.aiMessages.length - 1];
+              if (lastMsg) {
+                lastMsg.text = chunkText;
+                this.aiMessages = [...this.aiMessages];
+              }
+              this.$nextTick(scrollChat);
             });
 
-            this.aiMessages.push({
-              role: 'assistant',
-              text: response.reply,
-              actions: response.actions || [],
-              searchGroundingUsed: response.searchGroundingUsed
-            });
+            // Once fully stream completes, apply final details
+            const lastMsg = this.aiMessages[this.aiMessages.length - 1];
+            if (lastMsg) {
+              lastMsg.text = response.reply;
+              lastMsg.actions = response.actions || [];
+              lastMsg.searchGroundingUsed = response.searchGroundingUsed;
+              this.aiMessages = [...this.aiMessages];
+            }
 
             showToast("AI response generated!");
           } catch (e) {
             console.error("AI Planner error:", e);
-            this.aiMessages.push({
-              role: 'assistant',
-              text: `⚠️ **AI Error:** ${e.message}`,
-              actions: [],
-              searchGroundingUsed: false
-            });
+            const lastMsg = this.aiMessages[this.aiMessages.length - 1];
+            if (lastMsg) {
+              lastMsg.text = `⚠️ **AI Error:** ${e.message}`;
+              lastMsg.actions = [];
+              this.aiMessages = [...this.aiMessages];
+            }
             showToast("AI Error: " + e.message, "error");
           } finally {
             this.aiLoading = false;
             this.$nextTick(() => {
               refreshIcons();
-              const container = document.getElementById('ai-chat-container');
-              if (container) container.scrollTop = container.scrollHeight;
+              scrollChat();
             });
           }
         },
