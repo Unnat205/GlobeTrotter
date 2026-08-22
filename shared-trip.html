@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GlobeTrotter — Shared Itinerary & Map Route</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            neutral: {
+              950: '#030303',
+              900: '#09090b',
+              850: '#121215',
+              800: '#18181b',
+              700: '#27272a',
+              600: '#3f3f46',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="css/custom.css">
+  <!-- Supabase CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    
+    /* InfoWindow custom style */
+    .gm-style .gm-style-iw-c {
+      background-color: #09090b !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      border-radius: 12px !important;
+      padding: 10px !important;
+    }
+    .gm-style .gm-style-iw-tc::after {
+      background-color: #09090b !important;
+    }
+  </style>
+</head>
+<body class="bg-neutral-950 text-neutral-100 min-h-screen flex flex-col page-fade-in" x-data="sharedTripPage" x-init="initSharedPage()">
+
+  <main class="flex-grow max-w-4xl w-full mx-auto px-4 sm:px-6 py-8" x-cloak x-show="initialized">
+    
+    <!-- Top Brand Logo Header -->
+    <div class="flex items-center justify-between border-b border-neutral-900 pb-6 mb-8">
+      <div class="flex items-center gap-2 text-xl font-bold tracking-tight text-white">
+        <i data-lucide="compass" class="w-6 h-6 text-emerald-400"></i>
+        <span>Globe<span class="text-emerald-400">Trotter</span></span>
+      </div>
+      <a href="index.html" class="px-4 py-2 text-xs font-semibold bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-black rounded-xl transition-all">
+        Build Your Own
+      </a>
+    </div>
+
+    <!-- Error/Not Found state -->
+    <div x-show="error" class="glass-card rounded-2xl border border-neutral-850 p-12 text-center max-w-md mx-auto my-12">
+      <div class="w-14 h-14 bg-neutral-900 border border-neutral-800 text-rose-450 rounded-full flex items-center justify-center mx-auto mb-4">
+        <i data-lucide="lock" class="w-6 h-6"></i>
+      </div>
+      <h2 class="text-xl font-bold text-white mb-2">Itinerary Unreachable</h2>
+      <p class="text-sm text-neutral-455 leading-relaxed mb-6">
+        This trip details cannot be displayed. It may be set to private or the link is expired.
+      </p>
+      <a href="index.html" class="inline-flex py-3 px-6 bg-neutral-900 hover:bg-neutral-800 text-sm font-semibold rounded-xl border border-neutral-800 text-white transition-colors">
+        Return Home
+      </a>
+    </div>
+
+    <!-- Loading state -->
+    <div x-show="loading && !error" class="space-y-6">
+      <div class="h-48 bg-neutral-900/60 rounded-2xl animate-pulse"></div>
+      <div class="h-20 bg-neutral-900/60 rounded-xl animate-pulse"></div>
+    </div>
+
+    <!-- Public View Details -->
+    <div x-show="!loading && !error" class="space-y-8">
+      
+      <!-- Cover Header Card -->
+      <div class="glass-card rounded-2xl overflow-hidden border border-neutral-800/40 relative">
+        <div class="h-56 relative bg-neutral-900">
+          <img :src="trip?.cover_photo_url" :alt="trip?.name" class="w-full h-full object-cover brightness-[0.7]">
+          <div class="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/20 to-transparent"></div>
+          <div class="absolute bottom-6 left-6 right-6">
+            <span class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full">Shared Trip</span>
+            <h2 class="text-2xl md:text-3xl font-extrabold text-white mt-2" x-text="trip?.name"></h2>
+            <p class="text-xs text-neutral-300 mt-1 flex items-center gap-1.5">
+              <i data-lucide="calendar" class="w-3.5 h-3.5 text-neutral-400"></i>
+              <span x-text="trip ? formatDateRange(trip.start_date, trip.end_date) : ''"></span>
+            </p>
+          </div>
+        </div>
+        <div class="p-6 border-t border-neutral-900 bg-neutral-900/10">
+          <p class="text-sm text-neutral-300 leading-relaxed" x-text="trip?.description || 'No description provided.'"></p>
+        </div>
+      </div>
+
+      <!-- Quick stats ribbon -->
+      <div class="grid grid-cols-3 gap-4">
+        <div class="glass-card rounded-xl p-4 border border-neutral-800/40 text-center">
+          <span class="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider block">Duration</span>
+          <span class="text-lg font-bold text-white mt-1 block" x-text="timeline.length + ' Days'"></span>
+        </div>
+        <div class="glass-card rounded-xl p-4 border border-neutral-800/40 text-center">
+          <span class="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider block">Stops</span>
+          <span class="text-lg font-bold text-white mt-1 block" x-text="stops.length + ' Cities'"></span>
+        </div>
+        <div class="glass-card rounded-xl p-4 border border-neutral-800/40 text-center">
+          <span class="text-[10px] font-semibold text-neutral-500 uppercase tracking-wider block">Events</span>
+          <span class="text-lg font-bold text-white mt-1 block" x-text="activities.length + ' Scheduled'"></span>
+        </div>
+      </div>
+
+      <!-- Interactive Shared Route Map -->
+      <div x-show="stops.length > 0" class="space-y-4">
+        <div>
+          <h3 class="text-lg font-bold text-white mb-2">Interactive Route Map</h3>
+          <p class="text-xs text-neutral-400">View destinations and full transit path mapped below.</p>
+        </div>
+
+        <div class="glass-card rounded-3xl border border-neutral-850 overflow-hidden relative shadow-2xl" style="height: 380px;">
+          <div id="shared-map" class="w-full h-full" style="min-height: 380px;"></div>
+        </div>
+
+        <!-- Total Road Trip Summary Metrics -->
+        <div x-cloak x-show="roadTripMetrics" class="glass-card rounded-2xl p-5 border border-emerald-500/20 bg-emerald-500/5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-slide-in">
+          <div class="flex items-center gap-3">
+            <div class="p-2 bg-emerald-500/15 text-emerald-400 rounded-xl">
+              <i data-lucide="route" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h4 class="text-xs font-bold text-white uppercase tracking-wider">Itinerary Route Metrics</h4>
+              <p class="text-[11px] text-neutral-450 mt-0.5">Calculated real-time driving transit metrics via Google Maps Engine.</p>
+            </div>
+          </div>
+          <div class="flex gap-6">
+            <div>
+              <span class="text-[10px] text-neutral-500 uppercase font-semibold block">Total Route Distance</span>
+              <span class="text-sm font-extrabold text-white" x-text="roadTripMetrics?.distance"></span>
+            </div>
+            <div class="h-8 w-px bg-neutral-800 font-normal"></div>
+            <div>
+              <span class="text-[10px] text-neutral-500 uppercase font-semibold block">Estimated Commute Time</span>
+              <span class="text-sm font-extrabold text-white" x-text="roadTripMetrics?.duration"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Timeline Title -->
+      <div>
+        <h3 class="text-lg font-bold text-white mb-2">Master Timeline Calendar</h3>
+        <p class="text-xs text-neutral-400">Chronological travel schedule itinerary.</p>
+      </div>
+
+      <!-- Master Timeline read-only -->
+      <div class="relative pl-6 border-l-2 border-neutral-800 space-y-8 my-4 ml-3">
+        <template x-for="day in timeline" :key="day.date">
+          <div class="relative">
+            <!-- Node Dot Indicator -->
+            <div :class="day.stop ? 'bg-emerald-500 border-emerald-500/20' : 'bg-neutral-800 border-neutral-700'"
+              class="absolute -left-[31px] top-1.5 w-4 h-4 rounded-full border-4"></div>
+
+            <!-- Day Heading -->
+            <div class="flex items-baseline justify-between mb-3 flex-wrap gap-2">
+              <div>
+                <span class="text-xs font-bold text-emerald-450 uppercase tracking-wider" x-text="'Day ' + day.dayIndex"></span>
+                <span class="text-xs text-neutral-500 mx-1.5">&bull;</span>
+                <span class="text-sm font-semibold text-neutral-300" x-text="formatDate(day.date)"></span>
+              </div>
+              <div x-show="day.stop" class="text-right">
+                <span class="text-xs font-bold text-white" x-text="day.stop?.city_name"></span>
+                <span class="text-[10px] text-neutral-400 ml-1" x-text="'(' + day.stop?.country + ')'"></span>
+              </div>
+            </div>
+
+            <!-- Day Card details -->
+            <div class="glass-card rounded-2xl border border-neutral-850 p-5">
+              <div x-show="day.activities.length === 0" class="text-neutral-500 text-xs italic">
+                No specific events or lodging scheduled for this date.
+              </div>
+
+              <!-- Activities list -->
+              <div x-show="day.activities.length > 0" class="space-y-3">
+                <template x-for="act in day.activities" :key="act.id">
+                  <div class="flex items-start justify-between gap-4 py-2 border-b border-neutral-850/60 last:border-b-0">
+                    <div class="flex gap-3 min-w-0">
+                      <div :class="getCategoryBg(act.category)" class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <i :data-lucide="getCategoryIcon(act.category)" class="w-4 h-4"></i>
+                      </div>
+                      <div class="min-w-0">
+                        <h4 class="text-sm font-bold text-white truncate" x-text="act.name"></h4>
+                        <p class="text-[10px] text-neutral-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                          <span class="font-semibold uppercase tracking-wider text-neutral-500" x-text="act.category"></span>
+                          <span x-show="act.duration" class="text-neutral-600">&bull;</span>
+                          <span x-show="act.duration" x-text="formatDuration(act.duration)"></span>
+                          <span x-show="act.notes" class="text-neutral-600">&bull;</span>
+                          <span class="truncate" x-text="act.notes"></span>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+
+            </div>
+          </div>
+        </template>
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="py-8 text-center text-xs text-neutral-600 border-t border-neutral-900 mt-12">
+    Powered by GlobeTrotter Planner. Build yours for free.
+  </footer>
+
+
+
+  <!-- Scripts -->
+  <script type="module">
+    import { config } from './js/config.js';
+    import { getSupabase } from './js/supabase-client.js';
+    import { getTripBySlug } from './js/trips.js';
+    import { getStopsForTrip } from './js/stops.js';
+    import { refreshIcons } from './js/ui-helpers.js';
+
+    // Styled dark map sheet
+    const darkMapStyle = [
+      { elementType: "geometry", stylers: [{ color: "#18181b" }] },
+      { elementType: "labels.text.stroke", stylers: [{ color: "#09090b" }] },
+      { elementType: "labels.text.fill", stylers: [{ color: "#a1a1aa" }] },
+      {
+        featureType: "administrative.locality",
+        elementType: "labels.text.fill",
+        stylers: [{ color: "#f4f4f5" }],
+      },
+      {
+        featureType: "poi",
+        elementType: "labels.text.fill",
+        stylers: [{ color: "#10b981" }],
+      },
+      {
+        featureType: "poi.park",
+        elementType: "geometry",
+        stylers: [{ color: "#092415" }],
+      },
+      {
+        featureType: "road",
+        elementType: "geometry",
+        stylers: [{ color: "#27272a" }],
+      },
+      {
+        featureType: "road",
+        elementType: "geometry.stroke",
+        stylers: [{ color: "#18181b" }],
+      },
+      {
+        featureType: "road.highway",
+        elementType: "geometry",
+        stylers: [{ color: "#3f3f46" }],
+      },
+      {
+        featureType: "water",
+        elementType: "geometry",
+        stylers: [{ color: "#09090b" }],
+      },
+      {
+        featureType: "water",
+        elementType: "labels.text.fill",
+        stylers: [{ color: "#71717a" }],
+      }
+    ];
+
+    const initSharedTripPage = () => {
+      Alpine.data('sharedTripPage', () => ({
+        initialized: false,
+        loading: true,
+        error: false,
+        slug: null,
+        trip: null,
+        stops: [],
+        activities: [],
+        timeline: [],
+
+        // Google Maps states
+        googleMap: null,
+        googlePolylines: [],
+        googleMarkers: [],
+        roadTripMetrics: null,
+
+        async initSharedPage() {
+          const params = new URLSearchParams(window.location.search);
+          this.slug = params.get('slug');
+          
+          if (!this.slug) {
+            this.error = true;
+            this.loading = false;
+            this.initialized = true;
+            return;
+          }
+
+          if (!config.isConfigured()) {
+            this.error = true;
+            this.loading = false;
+            this.initialized = true;
+            return;
+          }
+
+          window.initGoogleMap = () => {
+            this.initMap();
+          };
+
+          // Load Google Maps SDK dynamically
+          config.loadGoogleMapsSDK('initGoogleMap', 'places,geometry');
+
+          this.initialized = true;
+          await this.loadSharedItinerary();
+
+          if (typeof google !== 'undefined' && google.maps) {
+            this.initMap();
+          }
+        },
+
+        async loadSharedItinerary() {
+          this.loading = true;
+          try {
+            let foundTrip = await getTripBySlug(this.slug);
+            let foundStops = [];
+            let foundActivities = [];
+
+            if (!foundTrip) {
+              // Curated mocks
+              const mockTrips = {
+                "jamnagar-family-heritage": {
+                  trip: {
+                    id: "curated_jamnagar",
+                    name: "Jamnagar Royal Heritage & Birding (Family Getaway)",
+                    description: "Curated weekend visit to Lakhota Lake & Palace, Khijadiya Bird Sanctuary, and ancient heritage markets. Thoughtfully paced for family travel.",
+                    start_date: "2026-10-12",
+                    end_date: "2026-10-15",
+                    cover_photo_url: "https://images.unsplash.com/photo-1596422846543-75c6fc18a523?auto=format&fit=crop&w=800&q=80"
+                  },
+                  stops: [
+                    { id: "s_jamnagar", trip_id: "curated_jamnagar", city_name: "Jamnagar", country: "India", start_date: "2026-10-12", end_date: "2026-10-15", order_index: 0, budget: 800 }
+                  ],
+                  activities: [
+                    { id: "a_j1", stop_id: "s_jamnagar", day_number: 1, name: "Lakhota Lake & Palace Museum", category: "sightseeing", cost: 100, duration: 120, notes: "Beautiful palace museum in the center of the lake. Watch the sunset." },
+                    { id: "a_j2", stop_id: "s_jamnagar", day_number: 2, name: "Khijadiya Bird Sanctuary Tour", category: "sightseeing", cost: 150, duration: 240, notes: "Over 200 species of migratory birds. Best visited early morning." },
+                    { id: "a_j3", stop_id: "s_jamnagar", day_number: 2, name: "Bala Hanuman Temple", category: "other", cost: 0, duration: 60, notes: "Famous for continuous Ram Dhun chanting since 1964." },
+                    { id: "a_j4", stop_id: "s_jamnagar", day_number: 3, name: "Authentic Gujarati Thali at Aram", category: "food", cost: 80, duration: 90, notes: "Traditional family dining experience." }
+                  ]
+                },
+                "ahmedabad-romantic-culture": {
+                  trip: {
+                    id: "curated_ahmedabad",
+                    name: "Ahmedabad Heritage & Sabarmati Cafe Date (Romantic / Culture)",
+                    description: "Explore the stunning Adalaj Stepwell, Sabarmati Ashram, Sabarmati Riverfront Walk, and a heritage candle-lit dinner at Agashiye.",
+                    start_date: "2026-11-20",
+                    end_date: "2026-11-22",
+                    cover_photo_url: "https://images.unsplash.com/photo-1605649487212-47bdab064df7?auto=format&fit=crop&w=800&q=80"
+                  },
+                  stops: [
+                    { id: "s_ahmedabad", trip_id: "curated_ahmedabad", city_name: "Ahmedabad", country: "India", start_date: "2026-11-20", end_date: "2026-11-22", order_index: 0, budget: 1200 }
+                  ],
+                  activities: [
+                    { id: "a_a1", stop_id: "s_ahmedabad", day_number: 1, name: "Adalaj Stepwell (Heritage Architecture)", category: "sightseeing", cost: 50, duration: 90, notes: "Stunning 15th century stepwell with intricate carvings." },
+                    { id: "a_a2", stop_id: "s_ahmedabad", day_number: 1, name: "Sabarmati Ashram Walk", category: "sightseeing", cost: 0, duration: 120, notes: "Peaceful walk along Mahatma Gandhi's former residence." },
+                    { id: "a_a3", stop_id: "s_ahmedabad", day_number: 2, name: "Sunset Boat Cruise & Cafe Date at Riverfront", category: "entertainment", cost: 200, duration: 180, notes: "Enjoy a scenic boat cruise followed by coffee at a riverfront cafe." },
+                    { id: "a_a4", stop_id: "s_ahmedabad", day_number: 2, name: "Agashiye Heritage Terrace Dining", category: "food", cost: 350, duration: 120, notes: "Traditional Gujarati feast on a beautiful candlelit heritage terrace." }
+                  ]
+                },
+                "gandhinagar-spiritual-nature": {
+                  trip: {
+                    id: "curated_gandhinagar",
+                    name: "Gandhinagar Green Belt & Akshardham Retreat (Nature & Spiritual)",
+                    description: "Spiritual weekend itinerary featuring the Akshardham Temple complex, Indroda Dinosaur & Fossil Park, and Sarita Udyan.",
+                    start_date: "2026-12-05",
+                    end_date: "2026-12-07",
+                    cover_photo_url: "https://images.unsplash.com/photo-1548013146-72479768bada?auto=format&fit=crop&w=800&q=80"
+                  },
+                  stops: [
+                    { id: "s_gandhinagar", trip_id: "curated_gandhinagar", city_name: "Gandhinagar", country: "India", start_date: "2026-12-05", end_date: "2026-12-07", order_index: 0, budget: 900 }
+                  ],
+                  activities: [
+                    { id: "a_g1", stop_id: "s_gandhinagar", day_number: 1, name: "Akshardham Temple complex & Water Show", category: "sightseeing", cost: 150, duration: 240, notes: "Magnificent temple architecture and spectacular evening light show." },
+                    { id: "a_g2", stop_id: "s_gandhinagar", day_number: 2, name: "Indroda Dinosaur and Fossil Park", category: "sightseeing", cost: 60, duration: 180, notes: "Known as India's Jurassic Park, great nature walks." },
+                    { id: "a_g3", stop_id: "s_gandhinagar", day_number: 2, name: "Sarita Udyan and Deer Park", category: "other", cost: 20, duration: 120, notes: "Quiet gardens by the river Sabarmati." }
+                  ]
+                }
+              };
+
+              if (mockTrips[this.slug]) {
+                foundTrip = mockTrips[this.slug].trip;
+                foundStops = mockTrips[this.slug].stops;
+                foundActivities = mockTrips[this.slug].activities;
+              }
+            } else {
+              foundStops = await getStopsForTrip(foundTrip.id);
+              if (foundStops.length > 0) {
+                const stopIds = foundStops.map(s => s.id);
+                const supabase = getSupabase();
+                if (supabase) {
+                  const { data: acts, error } = await supabase
+                    .from('activities')
+                    .select('*')
+                    .in('stop_id', stopIds);
+                  if (error) throw error;
+                  foundActivities = acts || [];
+                }
+              }
+            }
+
+            if (!foundTrip) {
+              this.error = true;
+              return;
+            }
+
+            this.trip = foundTrip;
+            this.stops = foundStops;
+            this.activities = foundActivities;
+
+            this.compileTimeline();
+            this.$nextTick(() => {
+              this.plotItineraryRoute();
+            });
+            refreshIcons();
+          } catch (e) {
+            this.error = true;
+            console.error(e);
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        compileTimeline() {
+          if (!this.trip) return;
+          
+          const tripStart = new Date(this.trip.start_date);
+          const tripEnd = new Date(this.trip.end_date);
+          
+          const totalDays = Math.ceil((tripEnd - tripStart) / (1000 * 60 * 60 * 24)) + 1;
+          const daysArray = [];
+
+          for (let i = 0; i < totalDays; i++) {
+            const currentDate = new Date(tripStart.getTime() + i * 24 * 60 * 60 * 1000);
+            const currentDateStr = currentDate.toISOString().split('T')[0];
+
+            const matchingStop = this.stops.find(s => s.start_date <= currentDateStr && currentDateStr <= s.end_date);
+            
+            let dayActs = [];
+            let stopDayNumber = null;
+
+            if (matchingStop) {
+              const stopStart = new Date(matchingStop.start_date);
+              stopDayNumber = Math.ceil((currentDate - stopStart) / (1000 * 60 * 60 * 24)) + 1;
+              dayActs = this.activities.filter(a => a.stop_id === matchingStop.id && a.day_number === stopDayNumber);
+            }
+
+            daysArray.push({
+              dayIndex: i + 1,
+              date: currentDateStr,
+              stop: matchingStop || null,
+              stopDayNumber: stopDayNumber,
+              activities: dayActs
+            });
+          }
+
+          this.timeline = daysArray;
+        },
+
+        // --- MAP LOADER ---
+        initMap() {
+          if (this.googleMap) return;
+
+          const canvas = document.getElementById('shared-map');
+          if (!canvas) return;
+
+          this.googleMap = new google.maps.Map(canvas, {
+            center: { lat: 48.8566, lng: 2.3522 },
+            zoom: 4,
+            styles: darkMapStyle,
+            mapTypeControl: false,
+            streetViewControl: false
+          });
+
+          this.googlePolylines = [];
+          this.plotItineraryRoute();
+        },
+
+        async geocodeAddress(query) {
+          const localCache = {
+            "paris": { lat: 48.8566, lon: 2.3522 },
+            "rome": { lat: 41.9028, lon: 12.4964 },
+            "london": { lat: 51.5074, lon: -0.1278 },
+            "tokyo": { lat: 35.6762, lon: 139.6503 },
+            "new york": { lat: 40.7128, lon: -74.0060 },
+            "barcelona": { lat: 41.3851, lon: 2.1734 },
+            "amsterdam": { lat: 52.3676, lon: 4.9041 },
+            "berlin": { lat: 52.5200, lon: 13.4050 },
+            "jamnagar": { lat: 22.4707, lon: 70.0577 },
+            "ahmedabad": { lat: 23.0225, lon: 72.5714 },
+            "ahemdabad": { lat: 23.0225, lon: 72.5714 },
+            "gandhinagar": { lat: 23.2156, lon: 72.6369 }
+          };
+
+          const normalized = query.toLowerCase().trim();
+          for (const key in localCache) {
+            if (normalized.includes(key)) {
+              return localCache[key];
+            }
+          }
+
+          const geocoder = new google.maps.Geocoder();
+          return new Promise((resolve) => {
+            geocoder.geocode({ address: query }, (results, status) => {
+              if (status === 'OK' && results[0]) {
+                const loc = results[0].geometry.location;
+                resolve({ lat: loc.lat(), lon: loc.lng() });
+              } else {
+                resolve(null);
+              }
+            });
+          });
+        },
+
+        async plotItineraryRoute() {
+          if (!this.googleMap || this.stops.length === 0) return;
+
+          this.googleMarkers.forEach(m => m.setMap(null));
+          this.googleMarkers = [];
+          
+          if (this.googlePolylines) {
+            this.googlePolylines.forEach(p => p.setMap(null));
+          }
+          this.googlePolylines = [];
+
+          const bounds = new google.maps.LatLngBounds();
+          const routeStops = [];
+
+          for (let s of this.stops) {
+            const query = `${s.city_name}, ${s.country}`;
+            const coords = await this.geocodeAddress(query);
+            if (coords) {
+              s.lat = coords.lat;
+              s.lon = coords.lon;
+              
+              const pos = { lat: coords.lat, lng: coords.lon };
+              routeStops.push(pos);
+
+              const marker = new google.maps.Marker({
+                position: pos,
+                map: this.googleMap,
+                label: {
+                  text: String(s.order_index + 1),
+                  color: "#ffffff",
+                  fontWeight: "bold"
+                },
+                icon: {
+                  path: google.maps.SymbolPath.CIRCLE,
+                  scale: 13,
+                  fillColor: "#10b981", 
+                  fillOpacity: 1,
+                  strokeColor: "#030303",
+                  strokeWeight: 3
+                }
+              });
+
+              const infoWindow = new google.maps.InfoWindow({
+                content: `
+                  <div class="p-1 font-sans text-neutral-100">
+                    <h4 class="text-xs font-bold text-white">${s.city_name}</h4>
+                    <p class="text-[9px] text-neutral-450 mt-0.5">${s.country}</p>
+                  </div>
+                `
+              });
+
+              marker.addListener('click', () => {
+                infoWindow.open(this.googleMap, marker);
+              });
+
+              this.googleMarkers.push(marker);
+              bounds.extend(pos);
+            }
+          }
+
+          if (routeStops.length >= 2) {
+            try {
+              const route = await this.computeNewRoute(routeStops);
+              
+              const path = google.maps.geometry.encoding.decodePath(route.polyline.encodedPolyline);
+              const polyline = new google.maps.Polyline({
+                path: path,
+                geodesic: true,
+                strokeColor: '#10b981',
+                strokeOpacity: 0.85,
+                strokeWeight: 5,
+                map: this.googleMap
+              });
+              this.googlePolylines.push(polyline);
+
+              const distMeters = route.distanceMeters || 0;
+              const durationSec = parseInt(route.duration) || 0;
+
+              const distanceKm = (distMeters / 1000).toFixed(1);
+              const hrs = Math.floor(durationSec / 3600);
+              const mins = Math.round((durationSec % 3600) / 60);
+
+              this.roadTripMetrics = {
+                distance: distanceKm + ' km',
+                duration: hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`
+              };
+            } catch (err) {
+              console.error("Error drawing route path via Routes API:", err);
+              this.roadTripMetrics = null;
+            }
+          } else {
+            this.roadTripMetrics = null;
+            if (routeStops.length === 1) {
+              this.googleMap.setCenter(routeStops[0]);
+              this.googleMap.setZoom(6);
+            }
+          }
+
+          if (this.googleMarkers.length > 0 && routeStops.length !== 1) {
+            this.googleMap.fitBounds(bounds);
+          }
+        },
+
+        async computeNewRoute(routeStops) {
+          let apiKey = config.getGoogleMapsKey(); // Dynamic fallback
+          const scripts = document.querySelectorAll('script');
+          for (let s of scripts) {
+            if (s.src && s.src.includes('key=')) {
+              const match = s.src.match(/key=([^&]+)/);
+              if (match) {
+                apiKey = match[1];
+                break;
+              }
+            }
+          }
+
+          const url = 'https://routes.googleapis.com/directions/v2:computeRoutes';
+          const origin = routeStops[0];
+          const dest = routeStops[routeStops.length - 1];
+          
+          const intermediates = [];
+          for (let i = 1; i < routeStops.length - 1; i++) {
+            intermediates.push({
+              location: {
+                latLng: {
+                  latitude: routeStops[i].lat,
+                  longitude: routeStops[i].lng
+                }
+              }
+            });
+          }
+
+          const body = {
+            origin: {
+              location: {
+                latLng: {
+                  latitude: origin.lat,
+                  longitude: origin.lng
+                }
+              }
+            },
+            destination: {
+              location: {
+                latLng: {
+                  latitude: dest.lat,
+                  longitude: dest.lng
+                }
+              }
+            },
+            travelMode: 'DRIVE',
+            routingPreference: 'TRAFFIC_UNAWARE'
+          };
+
+          if (intermediates.length > 0) {
+            body.intermediates = intermediates;
+          }
+
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Goog-Api-Key': apiKey,
+              'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline'
+            },
+            body: JSON.stringify(body)
+          });
+
+          if (!res.ok) {
+            throw new Error('Routes API request failed');
+          }
+
+          const data = await res.json();
+          if (!data.routes || data.routes.length === 0) {
+            throw new Error('No routes returned');
+          }
+
+          return data.routes[0];
+        },
+
+        // --- SCHEDULER HELPERS ---
+        formatDate(dateStr) {
+          const opt = { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' };
+          return new Date(dateStr).toLocaleDateString(undefined, opt);
+        },
+
+        formatDateRange(start, end) {
+          const opt = { month: 'short', day: 'numeric', year: 'numeric' };
+          const s = new Date(start).toLocaleDateString(undefined, opt);
+          const e = new Date(end).toLocaleDateString(undefined, opt);
+          return `${s} — ${e}`;
+        },
+
+        formatDuration(minutes) {
+          if (minutes >= 60) {
+            const hrs = Math.floor(minutes / 60);
+            const mins = minutes % 60;
+            return mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`;
+          }
+          return `${minutes}m`;
+        },
+
+        getCategoryIcon(cat) {
+          const icons = {
+            sightseeing: 'compass',
+            food: 'utensils',
+            transport: 'plane',
+            lodging: 'bed',
+            entertainment: 'ticket',
+            other: 'star'
+          };
+          return icons[cat] || 'star';
+        },
+
+        getCategoryBg(cat) {
+          const bgs = {
+            sightseeing: 'bg-emerald-500/10 text-emerald-400',
+            food: 'bg-orange-500/10 text-orange-400',
+            transport: 'bg-blue-500/10 text-blue-400',
+            lodging: 'bg-purple-500/10 text-purple-400',
+            entertainment: 'bg-pink-500/10 text-pink-400',
+            other: 'bg-neutral-800 text-neutral-350'
+          };
+          return bgs[cat] || bgs.other;
+        }
+      }));
+    };
+
+    if (window.Alpine) {
+      initSharedTripPage();
+    } else {
+      document.addEventListener('alpine:init', initSharedTripPage);
+    }
+  </script>
+  <!-- AlpineJS -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</body>
+</html>

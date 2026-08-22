@@ -1,0 +1,2394 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GlobeTrotter — Workspace Planner</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            neutral: {
+              950: '#030303',
+              900: '#09090b',
+              850: '#121215',
+              800: '#18181b',
+              700: '#27272a',
+              600: '#3f3f46',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="css/custom.css">
+  <!-- Supabase CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    
+    /* Custom Map Style inside infowindows */
+    .gm-style .gm-style-iw-c {
+      background-color: #09090b !important;
+      border: 1px solid rgba(255, 255, 255, 0.08) !important;
+      border-radius: 12px !important;
+      padding: 10px !important;
+    }
+    .gm-style .gm-style-iw-tc::after {
+      background-color: #09090b !important;
+    }
+  </style>
+</head>
+<body class="bg-neutral-950 text-neutral-100 min-h-screen flex flex-col page-fade-in" x-data="workspacePage" x-init="initWorkspace()">
+
+  <!-- Main Container -->
+  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6" x-cloak x-show="authorized">
+    
+    <!-- Workspace Sub-Header Navigation Ribbon -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-5 border-b border-neutral-900">
+      <div>
+        <div class="flex items-center gap-3">
+          <a href="dashboard.html" class="p-2 hover:bg-neutral-900 rounded-lg text-neutral-450 hover:text-white transition-colors" title="Back to Dashboard">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+          </a>
+          <div>
+            <h1 class="text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
+              <span x-text="trip?.name || 'Loading Plan...'"></span>
+              <span x-show="trip?.is_public" class="text-[9px] px-2 py-0.5 bg-emerald-500/10 text-emerald-450 rounded-full border border-emerald-500/20 font-bold uppercase tracking-wider">Public</span>
+              <span x-show="trip && !trip.is_public" class="text-[9px] px-2 py-0.5 bg-neutral-800 text-neutral-400 rounded-full border border-neutral-700 font-bold uppercase tracking-wider">Private</span>
+            </h1>
+            <p class="text-xs text-neutral-450 mt-1 flex items-center gap-1.5">
+              <i data-lucide="calendar" class="w-3.5 h-3.5 text-neutral-500"></i>
+              <span x-text="trip ? formatDateRange(trip.start_date, trip.end_date) : 'Loading dates...'"></span>
+              <span class="text-neutral-750">&bull;</span>
+              <span x-text="trip ? calculateDays(trip.start_date, trip.end_date) + ' Days Total' : ''"></span>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Panel & Tab Selector -->
+      <div class="flex flex-wrap items-center gap-3" x-show="stops.length > 0">
+        <!-- Visibility toggle -->
+        <button @click="togglePrivacy()" x-show="trip"
+          class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-neutral-900 border border-neutral-800 hover:border-neutral-700 text-neutral-350 hover:text-white transition-all flex items-center gap-1.5">
+          <i :data-lucide="trip?.is_public ? 'eye-off' : 'eye'" class="w-3.5 h-3.5"></i>
+          <span x-text="trip?.is_public ? 'Make Private' : 'Make Public'"></span>
+        </button>
+
+        <!-- Dynamic Share Link -->
+        <a :href="'shared-trip.html?slug=' + trip?.share_slug" target="_blank" x-show="trip && trip.is_public"
+          class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-emerald-500/10 border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-450 hover:text-emerald-400 transition-all flex items-center gap-1.5">
+          <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+          <span>Share Link</span>
+        </a>
+
+        <!-- Consolidated Tab Buttons -->
+        <div class="flex items-center gap-1 bg-neutral-900 border border-neutral-800 p-1 rounded-xl">
+          <button @click="setTab('stops')" 
+            :class="activeTab === 'stops' ? 'bg-emerald-500 text-black font-semibold shadow-lg' : 'text-neutral-450 hover:text-white'"
+            class="px-3.5 py-2 text-xs rounded-lg transition-all flex items-center gap-1.5 font-medium">
+            <i data-lucide="compass" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">Stops & Route</span>
+            <span class="sm:hidden">Stops</span>
+          </button>
+          <button @click="setTab('timeline')" 
+            :class="activeTab === 'timeline' ? 'bg-emerald-500 text-black font-semibold shadow-lg' : 'text-neutral-450 hover:text-white'"
+            class="px-3.5 py-2 text-xs rounded-lg transition-all flex items-center gap-1.5 font-medium">
+            <i data-lucide="list-todo" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">Timeline Planner</span>
+            <span class="sm:hidden">Timeline</span>
+          </button>
+          <button @click="setTab('calendar')" 
+            :class="activeTab === 'calendar' ? 'bg-emerald-500 text-black font-semibold shadow-lg' : 'text-neutral-450 hover:text-white'"
+            class="px-3.5 py-2 text-xs rounded-lg transition-all flex items-center gap-1.5 font-medium">
+            <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">Month Calendar</span>
+            <span class="sm:hidden">Calendar</span>
+          </button>
+          <button @click="setTab('budget')" 
+            :class="activeTab === 'budget' ? 'bg-emerald-500 text-black font-semibold shadow-lg' : 'text-neutral-450 hover:text-white'"
+            class="px-3.5 py-2 text-xs rounded-lg transition-all flex items-center gap-1.5 font-medium">
+            <i data-lucide="wallet" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">Budget & Cost</span>
+            <span class="sm:hidden">Budget</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- MAIN VIEWS AREA -->
+    <div x-show="stops.length > 0" class="space-y-6">
+
+      <!-- ================== TAB 1: STOPS & ROUTE BUILDER ================== -->
+      <div x-cloak x-show="activeTab === 'stops'" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Column 1: Manage Stop Form -->
+      <div class="space-y-4 lg:col-span-1">
+        <div class="glass-card rounded-2xl border border-neutral-800 p-5 space-y-4">
+          <h2 class="text-sm font-bold text-white flex items-center gap-2">
+            <i data-lucide="map-pin" class="w-4 h-4 text-emerald-400"></i>
+            <span x-text="editingStopId ? 'Edit Destination Details' : 'Add Destination Stop'"></span>
+          </h2>
+
+          <form @submit.prevent="saveStop()" class="space-y-4">
+            <!-- Autocomplete location search -->
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">Destination City</label>
+              <div class="relative">
+                <input id="stop-city-input" type="text" x-model="stopCity" required placeholder="Type city (e.g. Jamnagar, Ahmedabad)"
+                  class="w-full bg-neutral-900 border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all">
+                <i data-lucide="search" class="w-4 h-4 text-neutral-500 absolute left-3.5 top-3.5"></i>
+              </div>
+            </div>
+
+            <!-- Country label (automatically solved by places API) -->
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">Country / Region</label>
+              <input type="text" x-model="stopCountry" readonly placeholder="Resolved automatically" 
+                class="w-full bg-neutral-900/60 border border-neutral-800 text-neutral-400 rounded-xl px-4 py-3 text-sm cursor-not-allowed">
+            </div>
+
+            <!-- Date parameters picker -->
+            <div class="grid grid-cols-2 gap-3">
+              <!-- Arrival -->
+              <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">Arrival Date</label>
+                <input type="date" x-model="stopArrival" required @change="validateStopDates()"
+                  class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all">
+              </div>
+              <!-- Departure -->
+              <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">Departure Date</label>
+                <input type="date" x-model="stopDeparture" required @change="validateStopDates()"
+                  class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all">
+              </div>
+            </div>
+
+            <!-- Allocated Budget -->
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">Allocated Budget ($)</label>
+              <div class="relative">
+                <input type="number" step="0.01" min="0" x-model="stopBudget" required placeholder="0.00" 
+                  class="w-full bg-neutral-900 border border-neutral-800 rounded-xl pl-8 pr-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all">
+                <i data-lucide="dollar-sign" class="w-4 h-4 text-neutral-500 absolute left-3.5 top-3.5"></i>
+              </div>
+            </div>
+
+            <!-- Submit buttons -->
+            <div class="flex gap-2 pt-2">
+              <button x-show="editingStopId" type="button" @click="resetStopForm()" class="flex-1 py-3 text-xs bg-neutral-800 hover:bg-neutral-700 rounded-xl font-semibold transition-colors">
+                Cancel
+              </button>
+              <button type="submit" :disabled="submittingStop || stopDateError"
+                class="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 disabled:bg-neutral-850 disabled:text-neutral-500 text-black font-semibold text-xs rounded-xl transition-all flex items-center justify-center gap-1.5">
+                <span x-show="submittingStop" class="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin"></span>
+                <i x-show="!submittingStop" :data-lucide="editingStopId ? 'save' : 'plus'" class="w-3.5 h-3.5"></i>
+                <span x-text="submittingStop ? 'Saving...' : (editingStopId ? 'Save Edits' : 'Add Stop')"></span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Dates boundary notice helper -->
+        <div class="p-4 bg-neutral-900/40 border border-neutral-850/40 rounded-xl text-xs text-neutral-400 leading-relaxed">
+          <p class="font-semibold text-neutral-300 mb-1">Itinerary Constraints</p>
+          <ul class="list-disc pl-4 space-y-1">
+            <li>Stop dates must fall between <strong class="text-neutral-200" x-text="trip ? formatDate(trip.start_date) : ''"></strong> and <strong class="text-neutral-200" x-text="trip ? formatDate(trip.end_date) : ''"></strong>.</li>
+            <li>We recommend arranging stops chronologically to build an accurate route.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Column 2: Stops Timeline -->
+      <div class="space-y-4 lg:col-span-1">
+        <!-- Budget Stats Panel -->
+        <div class="glass-card rounded-2xl border border-neutral-800/40 p-5 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="p-2 bg-purple-500/10 text-purple-400 rounded-lg">
+              <i data-lucide="wallet" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <p class="text-xs text-neutral-400">Total Stops Budget</p>
+              <p class="text-lg font-bold text-white" x-text="'$' + totalAllocatedBudget.toLocaleString(undefined, {minimumFractionDigits: 2})"></p>
+            </div>
+          </div>
+          <span class="text-xs px-3 py-1 bg-neutral-800 border border-neutral-700 text-neutral-300 rounded-full" x-text="stops.length + ' stops planned'"></span>
+        </div>
+
+        <!-- Loading Skeletons -->
+        <div x-show="loading" class="space-y-3">
+          <template x-for="i in 3">
+            <div class="flex gap-4 p-4 bg-neutral-900/40 border border-neutral-850/40 rounded-xl items-center animate-pulse">
+              <div class="w-10 h-10 rounded-full bg-neutral-800/40"></div>
+              <div class="flex-grow space-y-2">
+                <div class="h-4 bg-neutral-800/40 rounded w-1/3"></div>
+                <div class="h-3 bg-neutral-800/40 rounded w-1/4"></div>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <!-- Empty Stops List State -->
+        <div x-show="!loading && stops.length === 0" class="glass-card rounded-2xl border border-neutral-800/60 p-12 text-center flex flex-col items-center justify-center">
+          <div class="w-12 h-12 rounded-full bg-neutral-900 border border-neutral-850 flex items-center justify-center text-neutral-400 mb-4">
+            <i data-lucide="compass" class="w-6 h-6"></i>
+          </div>
+          <h3 class="text-lg font-bold text-white mb-1">No destinations mapped</h3>
+          <p class="text-xs text-neutral-400 max-w-sm mb-4">
+            Add your first city stop using the form on the left.
+          </p>
+        </div>
+
+        <!-- Stops Timeline list -->
+        <div x-show="!loading && stops.length > 0" class="space-y-4">
+          <template x-for="(stop, index) in stops" :key="stop.id">
+            <div class="glass-card rounded-2xl border border-neutral-800/45 p-5 flex flex-col items-start justify-between gap-4 hover:border-neutral-750 transition-colors">
+              <div class="flex items-center gap-4">
+                <!-- Order Index badge -->
+                <div class="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center font-bold text-sm" x-text="index + 1"></div>
+                <div>
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <h3 class="text-base font-bold text-white" x-text="stop.city_name"></h3>
+                    <span class="text-xs text-neutral-455" x-text="stop.country"></span>
+                  </div>
+                  <p class="text-xs text-neutral-450 mt-0.5 flex items-center gap-1.5">
+                    <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                    <span x-text="formatDateRange(stop.start_date, stop.end_date)"></span>
+                    <span class="text-neutral-700">&bull;</span>
+                    <span x-text="calculateDays(stop.start_date, stop.end_date) + ' days'"></span>
+                  </p>
+                </div>
+              </div>
+
+              <!-- Right operations (Budget + Controls) -->
+              <div class="flex items-center justify-between gap-6 w-full border-t pt-3 border-neutral-850">
+                <div class="text-left">
+                  <p class="text-[10px] uppercase font-semibold text-neutral-500 tracking-wider">Allocated</p>
+                  <p class="text-sm font-bold text-emerald-450" x-text="'$' + parseFloat(stop.budget).toLocaleString(undefined, {minimumFractionDigits:2})"></p>
+                </div>
+
+                <!-- Action Dropdown Menu -->
+                <div class="relative" x-data="{ open: false }">
+                  <button @click="open = !open" @click.away="open = false" 
+                    class="p-2 hover:bg-neutral-900 rounded-lg text-neutral-400 hover:text-white transition-colors">
+                    <i data-lucide="more-horizontal" class="w-4 h-4"></i>
+                  </button>
+                  <div x-cloak x-show="open" x-transition:enter="transition ease-out duration-100" 
+                    x-transition:enter-start="transform opacity-0 scale-95" 
+                    x-transition:enter-end="transform opacity-100 scale-100" 
+                    x-transition:leave="transition ease-in duration-75" 
+                    x-transition:leave-start="transform opacity-100 scale-100" 
+                    x-transition:leave-end="transform opacity-0 scale-95" 
+                    class="absolute right-0 mt-1 w-44 rounded-xl border border-neutral-850 bg-neutral-950/95 shadow-2xl p-1 z-35 backdrop-blur-md">
+                    
+                    <!-- Move Up -->
+                    <button @click="moveStop(index, -1); open = false" :disabled="index === 0" 
+                      class="w-full text-left px-3 py-2 text-xs hover:bg-neutral-900 rounded-lg text-neutral-350 hover:text-white flex items-center gap-2 transition-colors disabled:opacity-30 disabled:hover:bg-transparent">
+                      <i data-lucide="arrow-up" class="w-3.5 h-3.5"></i>
+                      <span>Move Up</span>
+                    </button>
+                    <!-- Move Down -->
+                    <button @click="moveStop(index, 1); open = false" :disabled="index === stops.length - 1" 
+                      class="w-full text-left px-3 py-2 text-xs hover:bg-neutral-900 rounded-lg text-neutral-350 hover:text-white flex items-center gap-2 transition-colors disabled:opacity-30 disabled:hover:bg-transparent">
+                      <i data-lucide="arrow-down" class="w-3.5 h-3.5"></i>
+                      <span>Move Down</span>
+                    </button>
+
+                    <div class="h-px bg-neutral-900 my-1"></div>
+
+                    <!-- Edit details -->
+                    <button @click="startEditStop(stop); open = false" 
+                      class="w-full text-left px-3 py-2 text-xs hover:bg-neutral-900 rounded-lg text-neutral-350 hover:text-white flex items-center gap-2 transition-colors">
+                      <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+                      <span>Edit Details</span>
+                    </button>
+
+                    <!-- Allocate Budget -->
+                    <button @click="promptBudget(stop); open = false" 
+                      class="w-full text-left px-3 py-2 text-xs hover:bg-neutral-900 rounded-lg text-neutral-350 hover:text-white flex items-center gap-2 transition-colors">
+                      <i data-lucide="wallet" class="w-3.5 h-3.5 text-emerald-450"></i>
+                      <span>Allocate Budget</span>
+                    </button>
+
+                    <div class="h-px bg-neutral-900 my-1"></div>
+
+                    <!-- Delete Destination -->
+                    <button @click="deleteStopHandler(stop.id); open = false" 
+                      class="w-full text-left px-3 py-2 text-xs hover:bg-rose-500/10 rounded-lg text-rose-500 flex items-center gap-2 transition-colors">
+                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                      <span>Delete Stop</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+
+      <!-- Column 3: Route Map & Visuals -->
+      <div class="space-y-4 lg:col-span-1">
+        <div class="glass-card rounded-3xl border border-neutral-800 overflow-hidden relative" style="height: 410px;">
+          <!-- Map Canvas -->
+          <div id="builder-map" class="w-full h-full" style="min-height: 410px;"></div>
+        </div>
+
+        <!-- Road Trip Distance Metrics -->
+        <div x-cloak x-show="roadTripMetrics" class="glass-card rounded-2xl p-5 border border-emerald-500/20 bg-emerald-500/5 animate-slide-in">
+          <h4 class="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <i data-lucide="route" class="w-4 h-4 text-emerald-450"></i>
+            <span>Itinerary Route Summary</span>
+          </h4>
+          <div class="space-y-1.5 text-xs">
+            <div class="flex justify-between text-neutral-300">
+              <span>Total Distance:</span>
+              <span class="font-semibold text-white" x-text="roadTripMetrics?.distance"></span>
+            </div>
+            <div class="flex justify-between text-neutral-300">
+              <span>Estimated Driving Time:</span>
+              <span class="font-semibold text-white" x-text="roadTripMetrics?.duration"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ================== TAB 2: TIMELINE & ACTIVITIES PLANNER ================== -->
+    <div x-cloak x-show="activeTab === 'timeline'" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- Column 1: Stop Selector & Stop Budget info -->
+      <div class="space-y-4 lg:col-span-1">
+        <!-- Stops selection card -->
+        <div class="glass-card rounded-2xl border border-neutral-800 p-5 space-y-4">
+          <h3 class="text-xs font-semibold uppercase tracking-wider text-neutral-500">Selected Destination</h3>
+          
+          <div class="relative" x-data="{ open: false }">
+            <button @click="open = !open" 
+              class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none flex items-center justify-between">
+              <span x-text="selectedStop ? `${selectedStop.city_name}, ${selectedStop.country}` : 'Select a destination'"></span>
+              <i data-lucide="chevron-down" class="w-4 h-4 text-neutral-450"></i>
+            </button>
+            <div x-show="open" @click.away="open = false" x-transition class="absolute left-0 right-0 mt-2 rounded-xl border border-neutral-800 bg-neutral-950/95 shadow-2xl p-1 z-35 backdrop-blur-md">
+              <template x-for="st in stops" :key="st.id">
+                <button @click="selectStop(st); open = false" 
+                  class="w-full text-left px-3 py-2 text-xs hover:bg-neutral-900 rounded-lg text-neutral-300 hover:text-white transition-colors flex justify-between">
+                  <span x-text="`${st.city_name}, ${st.country}`"></span>
+                  <span class="text-emerald-450 font-bold" x-text="'$' + parseFloat(st.budget).toFixed(0)"></span>
+                </button>
+              </template>
+              <div x-show="stops.length === 0" class="p-3 text-xs text-neutral-500 italic">No stops added yet.</div>
+            </div>
+          </div>
+
+          <!-- Stop Specific Budget Analytics -->
+          <div x-show="selectedStop" class="pt-2 space-y-2 border-t border-neutral-850">
+            <div class="flex justify-between items-center text-xs">
+              <div>
+                <p class="text-[10px] uppercase font-semibold text-neutral-500 tracking-wider">Allocated Budget</p>
+                <p class="text-sm font-bold text-white" x-text="'$' + (parseFloat(selectedStop?.budget) || 0).toLocaleString()"></p>
+              </div>
+              <div class="h-8 w-px bg-neutral-850"></div>
+              <div>
+                <p class="text-[10px] uppercase font-semibold text-neutral-500 tracking-wider">Activities Total</p>
+                <p :class="isOverBudget ? 'text-rose-450' : 'text-emerald-455'"
+                  class="text-sm font-bold" x-text="'$' + stopTotalCost.toLocaleString(undefined, {minimumFractionDigits: 2})"></p>
+              </div>
+              <div class="h-8 w-px bg-neutral-850"></div>
+              <button @click="setTab('budget')" 
+                class="px-2.5 py-1.5 bg-neutral-900 border border-neutral-800 hover:border-purple-500/40 text-purple-400 hover:text-purple-300 rounded-xl transition-all flex items-center gap-1.5 text-[10px] font-semibold">
+                <i data-lucide="pie-chart" class="w-3 h-3"></i>
+                <span>Analytics</span>
+              </button>
+            </div>
+
+            <!-- Progress bar -->
+            <div class="relative w-full h-2 bg-neutral-900 rounded-full overflow-hidden">
+              <div :class="isOverBudget ? 'bg-rose-500' : 'bg-emerald-500'" 
+                class="h-full rounded-full transition-all duration-300"
+                :style="'width: ' + Math.min((stopTotalCost / (parseFloat(selectedStop?.budget) || 1)) * 100, 100) + '%'"></div>
+            </div>
+            <div class="flex justify-between items-center text-[10px] text-neutral-505">
+              <span x-text="'Progress: ' + Math.round((stopTotalCost / (parseFloat(selectedStop?.budget) || 1)) * 100) + '%'"></span>
+              <span x-show="isOverBudget" class="text-rose-400 font-semibold flex items-center gap-0.5">
+                <i data-lucide="alert-triangle" class="w-3 h-3"></i> Over budget by $<span x-text="(stopTotalCost - parseFloat(selectedStop?.budget)).toFixed(2)"></span>
+              </span>
+              <span x-show="!isOverBudget" class="text-emerald-450">
+                Remaining: $<span x-text="(parseFloat(selectedStop?.budget) - stopTotalCost).toFixed(2)"></span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stop Day Navigator (Horizontal Tabs) -->
+        <div x-show="selectedStop" class="flex border-b border-neutral-800 overflow-x-auto gap-2 pb-1">
+          <template x-for="day in stopDays" :key="day">
+            <button @click="selectedDay = day"
+              :class="selectedDay === day ? 'border-b-2 border-emerald-400 text-white font-bold' : 'text-neutral-450 hover:text-neutral-200'"
+              class="flex-shrink-0 px-4 py-2.5 text-sm transition-all focus:outline-none"
+              x-text="'Day ' + day">
+            </button>
+          </template>
+        </div>
+
+        <!-- Add Activity Button & Form Trigger -->
+        <div x-show="selectedStop" x-data="{ open: false }">
+          <button @click="open = !open; resetActivityForm(); activityFormOpen = true" x-show="!open"
+            class="w-full py-3.5 bg-neutral-900 border border-dashed border-neutral-800 hover:border-neutral-700 hover:bg-neutral-900/60 rounded-xl text-xs font-semibold text-neutral-450 hover:text-white transition-all flex items-center justify-center gap-2">
+            <i data-lucide="plus-circle" class="w-4.5 h-4.5 text-emerald-400"></i>
+            <span>Add Custom Activity to Day <span x-text="selectedDay"></span></span>
+          </button>
+
+          <!-- Inline Add Activity Form -->
+          <div x-show="open || activityFormOpen" class="glass-card rounded-2xl border border-neutral-800 p-5 space-y-4">
+            <h3 class="text-sm font-bold text-white" x-text="editingActivityId ? 'Edit Activity Details' : 'Create Custom Activity'"></h3>
+            
+            <form @submit.prevent="saveActivityHandler(); open = false" class="space-y-4">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1">Activity Name</label>
+                  <input type="text" x-model="actName" required placeholder="e.g. Guided Lakhota Palace Tour" 
+                    class="w-full bg-neutral-950 border border-neutral-850 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/50">
+                </div>
+                <div>
+                  <label class="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1">Category</label>
+                  <select x-model="actCategory" required
+                    class="w-full bg-neutral-950 border border-neutral-850 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/50">
+                    <option value="sightseeing">Sightseeing</option>
+                    <option value="food">Food & Dining</option>
+                    <option value="transport">Transport</option>
+                    <option value="lodging">Lodging</option>
+                    <option value="entertainment">Entertainment</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1">Cost ($)</label>
+                  <input type="number" step="0.01" min="0" x-model="actCost" required placeholder="0.00" 
+                    class="w-full bg-neutral-950 border border-neutral-850 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/50">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1">Start Time</label>
+                    <input type="time" x-model="actStartTime" required @change="calculateDurationFromTimes()"
+                      class="w-full bg-neutral-950 border border-neutral-850 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/50">
+                  </div>
+                  <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1">End Time</label>
+                    <input type="time" x-model="actEndTime" required @change="calculateDurationFromTimes()"
+                      class="w-full bg-neutral-950 border border-neutral-850 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/50">
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1">Notes (optional)</label>
+                <input type="text" x-model="actNotes" placeholder="Booking references, times..." 
+                  class="w-full bg-neutral-950 border border-neutral-850 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/50">
+              </div>
+
+              <div class="flex justify-end gap-2 pt-2">
+                <button type="button" @click="open = false; activityFormOpen = false; resetActivityForm()" class="px-4 py-2 text-xs font-semibold rounded-xl bg-neutral-800 hover:bg-neutral-700 transition-colors">
+                  Cancel
+                </button>
+                <button type="submit" :disabled="submittingActivity"
+                  class="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:bg-neutral-850 disabled:text-neutral-500 text-black font-semibold text-xs transition-colors flex items-center gap-1.5">
+                  <span x-show="submittingActivity" class="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin"></span>
+                  <i x-show="!submittingActivity" data-lucide="check" class="w-3.5 h-3.5"></i>
+                  <span x-text="submittingActivity ? 'Saving...' : 'Save Activity'"></span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Column 2: Selected Day Activities List -->
+      <div class="space-y-4 lg:col-span-1">
+        <div class="space-y-3">
+          <h3 class="text-xs font-semibold uppercase tracking-wider text-neutral-500" x-show="selectedStop">Day <span x-text="selectedDay"></span> Itinerary Schedule</h3>
+          
+          <!-- Empty State -->
+          <div x-show="!selectedStop" class="glass-card rounded-2xl border border-neutral-800/40 p-10 text-center flex flex-col items-center justify-center">
+            <div class="w-10 h-10 rounded-full bg-neutral-900 flex items-center justify-center text-neutral-500 mb-2">
+              <i data-lucide="info" class="w-5 h-5"></i>
+            </div>
+            <p class="text-xs text-neutral-400">Add or select a destination stop to load timeline.</p>
+          </div>
+
+          <div x-show="selectedStop && dayActivities.length === 0" class="glass-card rounded-2xl border border-neutral-800/40 p-8 text-center flex flex-col items-center justify-center">
+            <div class="w-10 h-10 rounded-full bg-neutral-900 flex items-center justify-center text-neutral-500 mb-2">
+              <i data-lucide="calendar" class="w-5 h-5"></i>
+            </div>
+            <p class="text-xs text-neutral-400">No events scheduled for Day <span x-text="selectedDay"></span> yet.</p>
+          </div>
+
+          <!-- Activities Cards -->
+          <div x-show="selectedStop && dayActivities.length > 0" class="space-y-3">
+            <template x-for="(act, idx) in dayActivities" :key="act.id">
+              <div class="flex flex-col items-center">
+                <!-- Flex Card container -->
+                <div class="w-full flex items-stretch gap-4">
+                  <div class="flex-grow glass-card rounded-2xl border border-neutral-850 p-4 flex items-center gap-3">
+                    <div :class="getCategoryBg(act.category)" class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <i :data-lucide="getCategoryIcon(act.category)" class="w-4 h-4"></i>
+                    </div>
+                    <div class="min-w-0">
+                      <h4 class="text-sm font-bold text-white truncate" x-text="act.name"></h4>
+                      <p class="text-[10px] text-neutral-450 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                        <span class="font-medium uppercase tracking-wider text-neutral-450" x-text="formatCategoryLabel(act.category)"></span>
+                        <span class="text-neutral-750">&bull;</span>
+                        
+                        <!-- Show formatted time range badge if present -->
+                        <template x-if="hasTimeRange(act.notes)">
+                          <span class="inline-flex items-center gap-1 text-emerald-400 font-semibold bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                            <i data-lucide="clock" class="w-3 h-3"></i>
+                            <span x-text="parseTimeRange(act.notes)"></span>
+                          </span>
+                        </template>
+                        
+                        <span x-show="act.duration && !hasTimeRange(act.notes)" x-text="formatDuration(act.duration)"></span>
+                        <span x-show="act.duration && hasTimeRange(act.notes)" class="text-neutral-500" x-text="'(' + formatDuration(act.duration) + ')'"></span>
+                        
+                        <span x-show="cleanNotes(act.notes)" class="text-neutral-750">&bull;</span>
+                        <span class="truncate" x-text="cleanNotes(act.notes)"></span>
+                      </p>
+                    </div>
+                  </div>
+
+                  <!-- Expense details -->
+                  <div class="w-28 sm:w-36 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-4 flex flex-col justify-center items-center text-center flex-shrink-0">
+                    <span class="text-[9px] font-bold text-emerald-500 uppercase tracking-widest">Expense</span>
+                    <span class="text-xs font-extrabold text-emerald-450 mt-1" x-text="'$' + parseFloat(act.cost).toFixed(2)"></span>
+                    
+                    <div class="flex items-center gap-1.5 mt-2">
+                      <button @click="startEditActivity(act); activityFormOpen = true" class="p-1 hover:bg-neutral-800 rounded text-neutral-450 hover:text-white transition-colors" title="Edit">
+                        <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                      </button>
+                      <button @click="deleteActivityHandler(act.id)" class="p-1 hover:bg-neutral-800 rounded text-rose-500 hover:bg-rose-500/10 transition-colors" title="Delete">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Spacer chevron down -->
+                <template x-if="idx < dayActivities.length - 1">
+                  <div class="flex flex-col items-center my-2">
+                    <div class="w-0.5 h-3 bg-gradient-to-b from-emerald-500/40 to-emerald-500/5"></div>
+                    <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-emerald-500/45"></i>
+                    <div class="w-0.5 h-2 bg-gradient-to-t from-emerald-500/40 to-emerald-500/5"></div>
+                  </div>
+                </template>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <!-- Column 3: Interactive Location Explorer Map -->
+      <div class="space-y-4 lg:col-span-1" x-show="selectedStop">
+        <h2 class="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-2">Location Map Explorer</h2>
+        
+        <div class="glass-card rounded-3xl border border-neutral-800 overflow-hidden relative" style="height: 350px;">
+          <!-- Map views -->
+          <div id="view-map" class="w-full h-full" x-show="!viewStreetViewActive" style="min-height: 350px;"></div>
+          <div id="view-streetview" class="w-full h-full" x-show="viewStreetViewActive" style="min-height: 350px;"></div>
+        </div>
+
+        <div class="flex gap-2">
+          <button @click="toggleViewStreetView()" 
+            :class="viewStreetViewActive ? 'bg-emerald-500 text-black font-bold' : 'bg-neutral-900 border border-neutral-800 text-neutral-300 hover:text-white'"
+            class="flex-1 py-2.5 px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5">
+            <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+            <span x-text="viewStreetViewActive ? 'Back to Map' : 'Street View'"></span>
+          </button>
+          
+          <button @click="toggleView3DRotation()" 
+            :class="view3DActive ? 'bg-emerald-500 text-black font-bold' : 'bg-neutral-900 border border-neutral-800 text-neutral-300 hover:text-white'"
+            class="flex-1 py-2.5 px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5">
+            <i data-lucide="plane" class="w-3.5 h-3.5"></i>
+            <span x-text="view3DActive ? 'Stop 3D' : 'Aerial 3D'"></span>
+          </button>
+        </div>
+
+        <!-- Neighborhood highlights -->
+        <div class="glass-card rounded-2xl border border-neutral-850 p-5 space-y-3">
+          <h4 class="text-xs font-bold text-white flex items-center gap-1.5">
+            <i data-lucide="compass" class="w-4 h-4 text-emerald-400"></i>
+            <span>Attractions near <span x-text="selectedStop?.city_name"></span></span>
+          </h4>
+          
+          <div class="space-y-2 max-h-52 overflow-y-auto custom-scrollbar pr-1">
+            <template x-for="p in viewNearbyPlaces">
+              <div class="bg-neutral-950/60 p-2.5 rounded-xl border border-neutral-900 flex justify-between items-center gap-3">
+                <div class="min-w-0">
+                  <span class="text-[10px] font-bold text-white truncate block" x-text="p.name"></span>
+                  <span class="text-[8px] text-neutral-500 capitalize" x-text="p.type"></span>
+                </div>
+                <div class="flex items-center gap-1.5 flex-shrink-0">
+                  <span class="text-[9px] font-bold text-amber-500 flex items-center gap-0.5" x-show="p.rating !== 'N/A'">
+                    <i data-lucide="star" class="w-3 h-3 fill-amber-500 text-amber-500"></i>
+                    <span x-text="p.rating"></span>
+                  </span>
+                  <button @click="addPlaceToItinerary(p)" class="p-1 bg-emerald-500/10 hover:bg-emerald-500 hover:text-black rounded text-emerald-400 transition-all" title="Add attraction to daily schedule">
+                    <i data-lucide="plus" class="w-3 h-3"></i>
+                  </button>
+                </div>
+              </div>
+            </template>
+            <div x-show="viewNearbyPlaces.length === 0" class="text-[9px] text-neutral-550 italic">
+              Searching attractions in <span x-text="selectedStop?.city_name"></span>...
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ================== TAB 3: MONTH CALENDAR GRID ================== -->
+    <div x-cloak x-show="activeTab === 'calendar'" class="space-y-6">
+      
+      <!-- Calendar Empty State -->
+      <div x-show="stops.length === 0" class="glass-card rounded-3xl border border-neutral-800 p-12 text-center max-w-lg mx-auto">
+        <div class="w-12 h-12 rounded-full bg-neutral-900 flex items-center justify-center text-neutral-450 mx-auto mb-4 border border-neutral-850">
+          <i data-lucide="calendar" class="w-6 h-6"></i>
+        </div>
+        <h3 class="text-base font-bold text-white mb-2">No calendar dates mapped</h3>
+        <p class="text-xs text-neutral-450 mb-6">
+          Your trip does not have any destinations configured yet. Configure stops on the first tab to view the monthly schedule.
+        </p>
+        <button @click="setTab('stops')" class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-black font-bold text-xs transition-colors">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          <span>Configure Stops</span>
+        </button>
+      </div>
+
+      <div x-show="stops.length > 0" class="space-y-6">
+        <div class="flex items-center justify-between mb-4 bg-neutral-900/40 p-4 rounded-2xl border border-neutral-800/60">
+          <h2 class="text-xl font-bold text-white flex items-center gap-2">
+            <i data-lucide="calendar" class="w-5 h-5 text-emerald-400"></i>
+            <span x-text="monthNames[currentMonth] + ' ' + currentYear"></span>
+          </h2>
+          <div class="flex gap-2">
+            <button @click="changeMonth(-1)" class="p-2 hover:bg-neutral-850 rounded-xl border border-neutral-800 text-neutral-400 hover:text-white transition-all">
+              <i data-lucide="chevron-left" class="w-4 h-4"></i>
+            </button>
+            <button @click="changeMonth(1)" class="p-2 hover:bg-neutral-850 rounded-xl border border-neutral-800 text-neutral-400 hover:text-white transition-all">
+              <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Monthly Grid Table -->
+        <div class="glass-card rounded-2xl border border-neutral-850 overflow-hidden shadow-2xl">
+          <div class="grid grid-cols-7 text-center bg-neutral-900/80 border-b border-neutral-850 py-3 text-xs font-bold uppercase tracking-wider text-neutral-400">
+            <div>Sun</div>
+            <div>Mon</div>
+            <div>Tue</div>
+            <div>Wed</div>
+            <div>Thu</div>
+            <div>Fri</div>
+            <div>Sat</div>
+          </div>
+          <div class="grid grid-cols-7 divide-x divide-y divide-neutral-850/60 min-h-[350px]">
+            <template x-for="week in calendarWeeks">
+              <template x-for="day in week">
+                <div @click="day && day.dayData ? selectMonthDay(day.dayData) : null"
+                  :class="{
+                    'bg-neutral-950/20 text-neutral-600 pointer-events-none opacity-40': !day || !day.isCurrentMonth,
+                    'hover:bg-neutral-900/60 cursor-pointer': day && day.isCurrentMonth,
+                    'bg-emerald-500/10 text-emerald-300 font-semibold border-emerald-500/20': day && day.dayData,
+                  }"
+                  class="p-3 flex flex-col justify-between min-h-[75px] transition-all">
+                  <span class="text-xs" :class="day && day.dayData ? 'text-emerald-400 font-semibold' : 'text-neutral-400'" x-text="day ? day.day : ''"></span>
+                  
+                  <div class="mt-2 text-left space-y-1">
+                    <template x-if="day && day.dayData">
+                      <div>
+                        <!-- Stop City Label -->
+                        <span class="text-[9px] font-bold bg-neutral-900 border border-neutral-800 text-neutral-200 px-1.5 py-0.5 rounded truncate block" 
+                          x-text="day.dayData.stop?.city_name || 'Transit'"></span>
+                        
+                        <!-- Activities count -->
+                        <span x-show="day.dayData.activities.length > 0" 
+                          class="text-[8px] text-emerald-450 font-medium block mt-1" 
+                          x-text="day.dayData.activities.length + ' scheduled'"></span>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+              </template>
+            </template>
+          </div>
+        </div>
+
+        <!-- Selected Day Details Draw Drawer -->
+        <div x-show="selectedDayData" class="glass-card rounded-2xl border border-neutral-800 p-5 space-y-3 animate-slide-in">
+          <div class="flex justify-between items-center border-b border-neutral-850 pb-3">
+            <div>
+              <h3 class="text-sm font-bold text-white" x-text="formatDate(selectedDayData?.date)"></h3>
+              <p class="text-xs text-neutral-405" x-text="selectedDayData?.stop ? `${selectedDayData.stop.city_name}, ${selectedDayData.stop.country}` : 'Transit / Off-route Day'"></p>
+            </div>
+            <button @click="selectedDayData = null" class="text-xs text-neutral-500 hover:text-white transition-colors">Dismiss</button>
+          </div>
+
+          <div class="space-y-2">
+            <template x-for="act in selectedDayData?.activities || []" :key="act.id">
+              <div class="flex justify-between items-center bg-neutral-900/60 p-3 rounded-xl border border-neutral-850">
+                <div class="flex items-center gap-2.5">
+                  <div :class="getCategoryBg(act.category)" class="w-7 h-7 rounded flex items-center justify-center">
+                    <i :data-lucide="getCategoryIcon(act.category)" class="w-3.5 h-3.5"></i>
+                  </div>
+                  <div>
+                    <span class="text-xs font-bold text-white block" x-text="act.name"></span>
+                    <p class="text-[9px] text-neutral-500 mt-0.5 flex items-center gap-1.5">
+                      <span class="capitalize" x-text="act.category"></span>
+                      <template x-if="hasTimeRange(act.notes)">
+                        <span class="text-emerald-450 font-semibold" x-text="'• ' + parseTimeRange(act.notes)"></span>
+                      </template>
+                    </p>
+                  </div>
+                </div>
+                <span class="text-xs font-bold text-emerald-450" x-text="'$' + parseFloat(act.cost).toFixed(2)"></span>
+              </div>
+            </template>
+            <div x-show="!selectedDayData?.activities || selectedDayData.activities.length === 0" class="text-xs text-neutral-500 italic py-2">
+              No specific events planned for this calendar date.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- ================== TAB 4: BUDGET & COST ANALYTICS ================== -->
+    <div x-cloak x-show="activeTab === 'budget'" class="space-y-6">
+      
+      <!-- Budget Empty State -->
+      <div x-show="stops.length === 0" class="glass-card rounded-3xl border border-neutral-800 p-12 text-center max-w-lg mx-auto">
+        <div class="w-12 h-12 rounded-full bg-neutral-900 flex items-center justify-center text-neutral-450 mx-auto mb-4 border border-neutral-850">
+          <i data-lucide="pie-chart" class="w-6 h-6"></i>
+        </div>
+        <h3 class="text-base font-bold text-white mb-2">No budget data compiled</h3>
+        <p class="text-xs text-neutral-455 mb-6">
+          Add destinations and plan activities with costs to review real-time financial tracking.
+        </p>
+      </div>
+
+      <div x-show="stops.length > 0" class="space-y-6">
+        <!-- Summary Cards Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <!-- Total Budget -->
+          <div class="glass-card rounded-2xl border border-neutral-800/40 p-5 flex items-center justify-between">
+            <div>
+              <p class="text-xs text-neutral-500 font-medium">Estimated Trip Budget</p>
+              <h3 class="text-2xl font-extrabold text-white mt-1" x-text="'$' + summary.total_budget.toLocaleString(undefined, {minimumFractionDigits: 2})"></h3>
+            </div>
+            <div class="p-3 bg-purple-500/10 text-purple-400 rounded-xl">
+              <i data-lucide="wallet" class="w-6 h-6"></i>
+            </div>
+          </div>
+
+          <!-- Total Actual Cost -->
+          <div class="glass-card rounded-2xl border border-neutral-800/40 p-5 flex items-center justify-between">
+            <div>
+              <p class="text-xs text-neutral-500 font-medium">Planned Activities Cost</p>
+              <h3 class="text-2xl font-extrabold mt-1" :class="summary.status === 'over-budget' ? 'text-rose-455' : 'text-white'"
+                x-text="'$' + summary.total_actual.toLocaleString(undefined, {minimumFractionDigits: 2})"></h3>
+            </div>
+            <div class="p-3 bg-emerald-500/10 text-emerald-450 rounded-xl">
+              <i data-lucide="banknote" class="w-6 h-6"></i>
+            </div>
+          </div>
+
+          <!-- Variance Remaining -->
+          <div class="glass-card rounded-2xl border border-neutral-850 p-5 flex items-center justify-between"
+            :class="{
+              'border-rose-500/20 bg-rose-500/5': summary.status === 'over-budget',
+              'border-emerald-500/20 bg-emerald-500/5': summary.status === 'on-budget',
+              'border-amber-500/20 bg-amber-500/5': summary.status === 'warning'
+            }">
+            <div>
+              <p class="text-xs text-neutral-500 font-medium">Variance Balance</p>
+              <h3 class="text-2xl font-extrabold mt-1" 
+                :class="{
+                  'text-rose-450': summary.status === 'over-budget',
+                  'text-emerald-450': summary.status === 'on-budget',
+                  'text-amber-450': summary.status === 'warning'
+                }"
+                x-text="(summary.remaining < 0 ? '-' : '') + '$' + Math.abs(summary.remaining).toLocaleString(undefined, {minimumFractionDigits: 2})"></h3>
+            </div>
+            <div class="p-3 rounded-xl"
+              :class="{
+                'bg-rose-500/10 text-rose-400': summary.status === 'over-budget',
+                'bg-emerald-500/10 text-emerald-400': summary.status === 'on-budget',
+                'bg-amber-500/10 text-amber-400': summary.status === 'warning'
+              }">
+              <i :data-lucide="summary.status === 'over-budget' ? 'trending-up' : 'trending-down'" class="w-6 h-6"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Budget Visualizations Column -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          
+          <!-- Category Cost Distribution Chart -->
+          <div class="glass-card rounded-2xl border border-neutral-800 p-5 lg:col-span-1 flex flex-col justify-between" style="min-height: 380px;">
+            <div>
+              <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-1">Expenses by Category</h4>
+              <p class="text-[10px] text-neutral-500">Distribution analysis of scheduled costs</p>
+            </div>
+            <div class="relative flex-grow flex items-center justify-center my-4" style="height: 220px;">
+              <canvas id="categoryChart"></canvas>
+            </div>
+            <div class="text-[9px] text-neutral-500 text-center border-t border-neutral-900 pt-3">
+              Allocated over lodging, transit, food, and sightseeing.
+            </div>
+          </div>
+
+          <!-- Destinations Stop Breakdown Table -->
+          <div class="glass-card rounded-2xl border border-neutral-800 p-5 lg:col-span-2">
+            <h4 class="text-xs font-bold text-white uppercase tracking-wider mb-1">Destinations Budget Tracking</h4>
+            <p class="text-[10px] text-neutral-500 mb-4">Financial performance per city stop</p>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr class="border-b border-neutral-850 text-neutral-450 uppercase tracking-widest text-[9px] font-bold">
+                    <th class="pb-3">City Stop</th>
+                    <th class="pb-3">Stop Budget</th>
+                    <th class="pb-3">Actual Cost</th>
+                    <th class="pb-3 text-right">Variance Balance</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-neutral-900 text-neutral-350">
+                  <template x-for="st in stopSummaries" :key="st.stop_id">
+                    <tr class="hover:bg-neutral-900/40 transition-colors">
+                      <td class="py-3 font-bold text-white" x-text="st.city_name"></td>
+                      <td class="py-3" x-text="'$' + parseFloat(st.budget).toLocaleString(undefined, {minimumFractionDigits: 2})"></td>
+                      <td class="py-3" x-text="'$' + parseFloat(st.actual_cost).toLocaleString(undefined, {minimumFractionDigits: 2})"></td>
+                      <td class="py-3 text-right font-semibold"
+                        :class="st.variance < 0 ? 'text-rose-450' : 'text-emerald-450'"
+                        x-text="(st.variance < 0 ? '-' : '') + '$' + Math.abs(st.variance).toLocaleString(undefined, {minimumFractionDigits:2})"></td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- ONBOARDING WELCOME CARD: If no destinations are mapped yet -->
+    <div x-cloak x-show="!loading && stops.length === 0" class="max-w-xl mx-auto my-12 animate-slide-in">
+      <div class="glass-card rounded-3xl border border-neutral-800 p-8 space-y-6 text-center shadow-2xl relative overflow-hidden bg-neutral-950/60 backdrop-blur-md">
+        
+        <!-- Ambient decorative blur background -->
+        <div class="absolute -top-12 -left-12 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl"></div>
+        <div class="absolute -bottom-12 -right-12 w-32 h-32 bg-purple-500/10 rounded-full blur-3xl"></div>
+
+        <div class="space-y-2 relative">
+          <div class="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mx-auto text-emerald-450 mb-3 animate-bounce">
+            <i data-lucide="compass" class="w-8 h-8"></i>
+          </div>
+          <h2 class="text-2xl font-extrabold text-white tracking-tight">Let's map your first stop!</h2>
+          <p class="text-xs text-neutral-400 max-w-sm mx-auto">
+            Welcome to <span class="text-emerald-400 font-semibold" x-text="trip?.name || 'your new trip'"></span>. Let's start by adding your first destination stop.
+          </p>
+        </div>
+
+        <div class="border-t border-neutral-900 pt-6 text-left space-y-4 relative">
+          <form @submit.prevent="saveStop()" class="space-y-4">
+            <!-- Autocomplete location search -->
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-neutral-450 mb-1.5">Destination City</label>
+              <div class="relative">
+                <input id="onboard-city-input" type="text" x-model="stopCity" required placeholder="Type city name..."
+                  class="w-full bg-neutral-900 border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all">
+                <i data-lucide="search" class="w-4.5 h-4.5 text-neutral-500 absolute left-3.5 top-3.5"></i>
+              </div>
+            </div>
+
+            <!-- Date parameters picker -->
+            <div class="grid grid-cols-2 gap-3">
+              <!-- Arrival -->
+              <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-neutral-450 mb-1.5">Arrival Date</label>
+                <input type="date" x-model="stopArrival" required @change="validateStopDates()"
+                  class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all">
+              </div>
+              <!-- Departure -->
+              <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-neutral-450 mb-1.5">Departure Date</label>
+                <input type="date" x-model="stopDeparture" required @change="validateStopDates()"
+                  class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-xs text-white focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all">
+              </div>
+            </div>
+
+            <!-- Allocated Budget -->
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-neutral-450 mb-1.5">Allocated Budget ($)</label>
+              <div class="relative">
+                <input type="number" step="0.01" min="0" x-model="stopBudget" required placeholder="e.g. 1000.00" 
+                  class="w-full bg-neutral-900 border border-neutral-800 rounded-xl pl-8 pr-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all">
+                <i data-lucide="dollar-sign" class="w-4 h-4 text-neutral-500 absolute left-3.5 top-3.5"></i>
+              </div>
+            </div>
+
+            <!-- Submit buttons -->
+            <div class="pt-2">
+              <button type="submit" :disabled="submittingStop || stopDateError"
+                class="w-full py-3.5 bg-emerald-500 hover:bg-emerald-600 disabled:bg-neutral-850 disabled:text-neutral-500 text-black font-bold text-sm rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-lg">
+                <span x-show="submittingStop" class="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin"></span>
+                <i x-show="!submittingStop" data-lucide="compass" class="w-4 h-4"></i>
+                <span x-text="submittingStop ? 'Mapping Stop...' : 'Add First Stop & Get Started'"></span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Global Budget Allocation Popup modal (from Stops tab) -->
+  <div x-cloak x-show="budgetModalOpen" 
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+    x-transition:enter="transition ease-out duration-200"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="transition ease-in duration-150"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0">
+    
+    <div @click.away="budgetModalOpen = false" 
+      class="glass-card w-full max-w-md rounded-2xl border border-neutral-800/80 bg-neutral-950 p-6 shadow-2xl relative"
+      x-transition:enter="transition ease-out duration-250"
+      x-transition:enter-start="scale-95 translate-y-4 opacity-0"
+      x-transition:enter-end="scale-100 translate-y-0 opacity-100"
+      x-transition:leave="transition ease-in duration-150"
+      x-transition:leave-start="scale-100 translate-y-0 opacity-100"
+      x-transition:leave-end="scale-95 translate-y-4 opacity-0">
+      
+      <!-- Close Button -->
+      <button @click="budgetModalOpen = false" class="absolute top-4 right-4 p-1.5 hover:bg-neutral-900 rounded-lg text-neutral-400 hover:text-white transition-colors">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+
+      <!-- Content -->
+      <div class="mb-5">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="wallet" class="w-4.5 h-4.5 text-emerald-400"></i>
+          <span>Allocate Stop Budget</span>
+        </h3>
+        <p class="text-xs text-neutral-400 mt-1">
+          Adjust the financial budget allocated for <strong class="text-neutral-200" x-text="budgetModalStopCity"></strong>.
+        </p>
+      </div>
+
+      <!-- Input Field -->
+      <form @submit.prevent="saveBudgetAllocation()">
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">Budget Amount ($)</label>
+            <div class="relative">
+              <input type="number" step="0.01" min="0" x-model="budgetModalAmount" required placeholder="0.00" autofocus
+                class="w-full bg-neutral-900 border border-neutral-800 rounded-xl pl-8 pr-4 py-3 text-sm text-white focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all">
+              <i data-lucide="dollar-sign" class="w-4 h-4 text-neutral-500 absolute left-3.5 top-3.5"></i>
+            </div>
+          </div>
+
+          <div class="flex gap-2.5 pt-2">
+            <button type="button" @click="budgetModalOpen = false" 
+              class="flex-1 py-2.5 text-xs bg-neutral-900 hover:bg-neutral-850 border border-neutral-800 text-white rounded-xl font-semibold transition-colors">
+              Cancel
+            </button>
+            <button type="submit" 
+              class="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold text-xs rounded-xl transition-colors">
+              Save Budget
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script type="module">
+    import { config } from './js/config.js';
+    import { getSession } from './js/auth.js';
+    import { loadNavbar, showToast, refreshIcons } from './js/ui-helpers.js';
+    import { getTripById, updateTrip } from './js/trips.js';
+    import { getStopsForTrip, createStop, updateStop, deleteStop, reorderStops } from './js/stops.js';
+    import { getActivitiesForStop, createActivity, updateActivity, deleteActivity } from './js/activities.js';
+    import { getSupabase } from './js/supabase-client.js';
+    import { calculateCategoryBreakdown, calculateStopCosts, calculateTripSummary } from './js/budget-calc.js';
+
+    // Obsidian style map style variables
+    const darkMapStyle = [
+      { elementType: "geometry", stylers: [{ color: "#18181b" }] },
+      { elementType: "labels.text.stroke", stylers: [{ color: "#09090b" }] },
+      { elementType: "labels.text.fill", stylers: [{ color: "#a1a1aa" }] },
+      {
+        featureType: "administrative.locality",
+        elementType: "labels.text.fill",
+        stylers: [{ color: "#f4f4f5" }],
+      },
+      {
+        featureType: "poi",
+        elementType: "labels.text.fill",
+        stylers: [{ color: "#10b981" }],
+      },
+      {
+        featureType: "poi.park",
+        elementType: "geometry",
+        stylers: [{ color: "#092415" }],
+      },
+      {
+        featureType: "road",
+        elementType: "geometry",
+        stylers: [{ color: "#27272a" }],
+      },
+      {
+        featureType: "road",
+        elementType: "geometry.stroke",
+        stylers: [{ color: "#18181b" }],
+      },
+      {
+        featureType: "road.highway",
+        elementType: "geometry",
+        stylers: [{ color: "#3f3f46" }],
+      },
+      {
+        featureType: "water",
+        elementType: "geometry",
+        stylers: [{ color: "#09090b" }],
+      },
+      {
+        featureType: "water",
+        elementType: "labels.text.fill",
+        stylers: [{ color: "#71717a" }],
+      }
+    ];
+
+    let categoryChartInstance = null;
+
+    const initWorkspacePage = () => {
+      Alpine.data('workspacePage', () => ({
+        authorized: false,
+        loading: true,
+        activeTab: 'stops', // 'stops', 'timeline', 'calendar', 'budget'
+        tripId: null,
+        trip: null,
+        stops: [],
+        activities: [],
+
+        // Tab 1 Fields (Stops)
+        editingStopId: null,
+        stopCity: '',
+        stopCountry: '',
+        stopArrival: '',
+        stopDeparture: '',
+        stopBudget: '',
+        stopDateError: false,
+        submittingStop: false,
+
+        // Quick budget modal
+        budgetModalOpen: false,
+        budgetModalStopId: null,
+        budgetModalStopCity: '',
+        budgetModalAmount: 0,
+
+        // Tab 2 Fields (Timeline)
+        selectedStop: null,
+        selectedDay: 1,
+
+        editingActivityId: null,
+        actName: '',
+        actCategory: 'sightseeing',
+        actCost: '',
+        actDuration: '',
+        actNotes: '',
+        actStartTime: '09:00',
+        actEndTime: '10:30',
+        submittingActivity: false,
+        activityFormOpen: false,
+
+        // Maps data
+        googleMapBuilder: null,
+        builderMarkers: [],
+        builderPolylines: [],
+        roadTripMetrics: null,
+
+        googleMapView: null,
+        viewMarkers: [],
+        viewPolylines: [],
+        activeStopMarker: null,
+        placesService: null,
+        streetViewPanorama: null,
+        viewStreetViewActive: false,
+        view3DActive: false,
+        aerialRotationInterval: null,
+        viewNearbyPlaces: [],
+
+        // Calendar Month fields
+        currentMonth: null,
+        currentYear: null,
+        calendarWeeks: [],
+        selectedDayData: null,
+        monthNames: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+
+        // Budget Analytics summary
+        summary: { total_budget: 0, total_actual: 0, remaining: 0, status: 'on-budget' },
+        stopSummaries: [],
+
+        async initWorkspace() {
+          const session = await getSession();
+          if (!session) {
+            window.location.href = 'index.html';
+            return;
+          }
+
+          const params = new URLSearchParams(window.location.search);
+          this.tripId = params.get('tripId');
+          if (!this.tripId) {
+            window.location.href = 'dashboard.html';
+            return;
+          }
+
+          // Parse active tab from URL parameter if present
+          const urlTab = params.get('tab');
+          if (urlTab && ['stops', 'timeline', 'calendar', 'budget'].includes(urlTab)) {
+            this.activeTab = urlTab;
+          }
+
+          window.initGoogleMap = () => {
+            this.initMaps();
+          };
+
+          // Load Google SDK
+          config.loadGoogleMapsSDK('initGoogleMap', 'places,geometry');
+
+          this.authorized = true;
+          await loadNavbar();
+          await this.loadTripDetails();
+          await this.loadStopsData();
+
+          if (typeof google !== 'undefined' && google.maps) {
+            this.initMaps();
+          }
+        },
+
+        async loadTripDetails() {
+          try {
+            this.trip = await getTripById(this.tripId);
+            this.stopArrival = this.trip.start_date;
+            this.stopDeparture = this.trip.start_date;
+          } catch (e) {
+            showToast("Failed to fetch trip meta info", "error");
+            window.location.href = 'dashboard.html';
+          }
+        },
+
+        async togglePrivacy() {
+          if (!this.trip) return;
+          try {
+            const nextPublic = !this.trip.is_public;
+            const updated = await updateTrip(this.tripId, { is_public: nextPublic });
+            this.trip.is_public = updated.is_public;
+            this.$nextTick(() => refreshIcons());
+            showToast(`Trip visibility updated to ${updated.is_public ? 'Public' : 'Private'}!`, "success");
+          } catch (e) {
+            showToast("Failed to update trip privacy.", "error");
+          }
+        },
+
+        async loadStopsData() {
+          this.loading = true;
+          try {
+            this.stops = await getStopsForTrip(this.tripId);
+
+            if (this.stops.length > 0) {
+              const stopIds = this.stops.map(s => s.id);
+              const supabase = getSupabase();
+              if (supabase) {
+                const { data: acts, error } = await supabase
+                  .from('activities')
+                  .select('*')
+                  .in('stop_id', stopIds)
+                  .order('day_number', { ascending: true })
+                  .order('order_index', { ascending: true });
+                if (error) throw error;
+                this.activities = acts || [];
+              }
+            } else {
+              this.activities = [];
+            }
+
+            // Sync selectors
+            if (this.stops.length > 0) {
+              if (!this.selectedStop || !this.stops.some(s => s.id === this.selectedStop.id)) {
+                this.selectedStop = this.stops[0];
+              }
+            } else {
+              this.selectedStop = null;
+            }
+
+            // Compile secondary calculations
+            this.compileTimeline();
+            this.buildMonthGrid();
+
+            // Refresh visuals
+            this.$nextTick(() => {
+              this.plotItineraryRoute();
+              this.centerMapOnSelectedStop();
+              this.loadBudgetDetails();
+            });
+
+            refreshIcons();
+          } catch (e) {
+            showToast("Failed to compile stops & timeline: " + e.message, "error");
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        setTab(tab) {
+          this.activeTab = tab;
+          
+          // Update URL params
+          const url = new URL(window.location);
+          url.searchParams.set('tab', tab);
+          window.history.pushState({}, '', url);
+
+          this.$nextTick(() => {
+            refreshIcons();
+            if (tab === 'stops') {
+              this.initBuilderMap();
+            } else if (tab === 'timeline') {
+              this.initViewMap();
+            } else if (tab === 'budget') {
+              this.loadBudgetDetails();
+            }
+          });
+        },
+
+        // --- MAPS AND GEOLOCATION ---
+        initMaps() {
+          this.initBuilderMap();
+          this.initViewMap();
+          this.initOnboardingAutocomplete();
+        },
+
+        initBuilderMap() {
+          if (this.googleMapBuilder || this.activeTab !== 'stops') return;
+          const canvas = document.getElementById('builder-map');
+          if (!canvas) return;
+
+          this.googleMapBuilder = new google.maps.Map(canvas, {
+            center: { lat: 22.4707, lng: 70.0577 }, // Default center Jamnagar region
+            zoom: 6,
+            styles: darkMapStyle,
+            mapTypeControl: false,
+            streetViewControl: false
+          });
+
+          // Setup Autocomplete
+          const cityInput = document.getElementById('stop-city-input');
+          if (cityInput) {
+            if (google.maps.places && google.maps.places.PlaceAutocompleteElement) {
+              try {
+                const autocomplete = new google.maps.places.PlaceAutocompleteElement();
+                cityInput.replaceWith(autocomplete);
+                autocomplete.id = 'stop-city-input';
+                
+                autocomplete.addEventListener('gmp-select', async ({ placePrediction }) => {
+                  if (!placePrediction) return;
+                  const place = placePrediction.toPlace();
+                  try {
+                    await place.fetchFields({
+                      fields: ['displayName', 'location', 'addressComponents']
+                    });
+                    
+                    let city = '';
+                    let country = '';
+                    if (place.addressComponents) {
+                      place.addressComponents.forEach(c => {
+                        const name = c.longName || c.long_name || c.longText || c.shortName || c.short_name || '';
+                        if (c.types.includes('locality')) {
+                          city = name;
+                        } else if (c.types.includes('administrative_area_level_1') && !city) {
+                          city = name;
+                        } else if (c.types.includes('country')) {
+                          country = name;
+                        }
+                      });
+                    }
+                    this.stopCity = city || place.displayName;
+                    this.stopCountry = country || 'Unknown Country';
+                    this.googleMapBuilder.setCenter(place.location);
+                    this.googleMapBuilder.setZoom(10);
+                  } catch (err) {
+                    console.error("Autocomplete details fetch failed:", err);
+                  }
+                });
+              } catch (e) {
+                console.warn("PlaceAutocompleteElement failed, falling back:", e);
+                this.setupLegacyAutocomplete(cityInput, false);
+              }
+            } else {
+              this.setupLegacyAutocomplete(cityInput, false);
+            }
+          }
+
+          this.plotItineraryRoute();
+        },
+
+        initOnboardingAutocomplete() {
+          const onboardInput = document.getElementById('onboard-city-input');
+          if (!onboardInput) return;
+
+          if (google.maps.places && google.maps.places.PlaceAutocompleteElement) {
+            try {
+              const autocomplete = new google.maps.places.PlaceAutocompleteElement();
+              onboardInput.replaceWith(autocomplete);
+              autocomplete.id = 'onboard-city-input';
+
+              autocomplete.addEventListener('gmp-select', async ({ placePrediction }) => {
+                if (!placePrediction) return;
+                const place = placePrediction.toPlace();
+                try {
+                  await place.fetchFields({
+                    fields: ['displayName', 'location', 'addressComponents']
+                  });
+                  
+                  let city = '';
+                  let country = '';
+                  if (place.addressComponents) {
+                    place.addressComponents.forEach(c => {
+                      const name = c.longName || c.long_name || c.longText || c.shortName || c.short_name || '';
+                      if (c.types.includes('locality')) {
+                        city = name;
+                      } else if (c.types.includes('administrative_area_level_1') && !city) {
+                        city = name;
+                      } else if (c.types.includes('country')) {
+                        country = name;
+                      }
+                    });
+                  }
+                  this.stopCity = city || place.displayName;
+                  this.stopCountry = country || 'Unknown Country';
+                } catch (err) {
+                  console.error("Onboard autocomplete details fetch failed:", err);
+                }
+              });
+              return;
+            } catch (e) {
+              console.warn("Onboard PlaceAutocompleteElement failed, falling back:", e);
+            }
+          }
+
+          this.setupLegacyAutocomplete(onboardInput, true);
+        },
+
+        setupLegacyAutocomplete(inputEl, isOnboarding) {
+          try {
+            const autocomplete = new google.maps.places.Autocomplete(inputEl, {
+              types: ['(cities)']
+            });
+            autocomplete.addListener('place_changed', () => {
+              const place = autocomplete.getPlace();
+              if (!place.geometry || !place.geometry.location) return;
+
+              let city = '';
+              let country = '';
+              if (place.address_components) {
+                place.address_components.forEach(c => {
+                  if (c.types.includes('locality')) {
+                    city = c.long_name;
+                  } else if (c.types.includes('administrative_area_level_1') && !city) {
+                    city = c.long_name;
+                  } else if (c.types.includes('country')) {
+                    country = c.long_name;
+                  }
+                });
+              }
+
+              this.stopCity = city || place.name;
+              this.stopCountry = country || 'Unknown Country';
+
+              if (!isOnboarding && this.googleMapBuilder) {
+                this.googleMapBuilder.setCenter(place.geometry.location);
+                this.googleMapBuilder.setZoom(10);
+              }
+            });
+          } catch (e) {
+            console.error("Legacy Autocomplete initialization failed:", e);
+          }
+        },
+
+        initViewMap() {
+          if (this.googleMapView || this.activeTab !== 'timeline') return;
+          const canvas = document.getElementById('view-map');
+          if (!canvas) return;
+
+          this.googleMapView = new google.maps.Map(canvas, {
+            center: { lat: 22.4707, lng: 70.0577 },
+            zoom: 11,
+            styles: darkMapStyle,
+            mapTypeControl: false,
+            streetViewControl: false
+          });
+
+          try {
+            if (google.maps.places && google.maps.places.PlacesService) {
+              this.placesService = new google.maps.PlacesService(this.googleMapView);
+            }
+          } catch (e) {
+            console.warn("Legacy PlacesService not available:", e);
+          }
+          this.centerMapOnSelectedStop();
+        },
+
+        async geocodeAddress(query) {
+          const localCache = {
+            "paris": { lat: 48.8566, lon: 2.3522 },
+            "rome": { lat: 41.9028, lon: 12.4964 },
+            "london": { lat: 51.5074, lon: -0.1278 },
+            "tokyo": { lat: 35.6762, lon: 139.6503 },
+            "new york": { lat: 40.7128, lon: -74.0060 },
+            "barcelona": { lat: 41.3851, lon: 2.1734 },
+            "amsterdam": { lat: 52.3676, lon: 4.9041 },
+            "berlin": { lat: 52.5200, lon: 13.4050 },
+            "jamnagar": { lat: 22.4707, lon: 70.0577 },
+            "ahmedabad": { lat: 23.0225, lon: 72.5714 },
+            "ahemdabad": { lat: 23.0225, lon: 72.5714 },
+            "gandhinagar": { lat: 23.2156, lon: 72.6369 }
+          };
+
+          const normalized = query.toLowerCase().trim();
+          for (const key in localCache) {
+            if (normalized.includes(key)) {
+              return localCache[key];
+            }
+          }
+
+          const geocoder = new google.maps.Geocoder();
+          return new Promise((resolve) => {
+            geocoder.geocode({ address: query }, (results, status) => {
+              if (status === 'OK' && results[0]) {
+                const loc = results[0].geometry.location;
+                resolve({ lat: loc.lat(), lon: loc.lng() });
+              } else {
+                resolve(null);
+              }
+            });
+          });
+        },
+
+        async plotItineraryRoute() {
+          if (!this.googleMapBuilder) return;
+
+          this.builderMarkers.forEach(m => m.setMap(null));
+          this.builderMarkers = [];
+
+          if (this.builderPolylines) {
+            this.builderPolylines.forEach(p => p.setMap(null));
+          }
+          this.builderPolylines = [];
+
+          if (this.stops.length === 0) {
+            this.roadTripMetrics = null;
+            return;
+          }
+
+          const bounds = new google.maps.LatLngBounds();
+          const routeStops = [];
+
+          for (let s of this.stops) {
+            const query = `${s.city_name}, ${s.country}`;
+            const coords = await this.geocodeAddress(query);
+            if (coords) {
+              s.lat = coords.lat;
+              s.lon = coords.lon;
+
+              const pos = { lat: coords.lat, lng: coords.lon };
+              routeStops.push(pos);
+
+              const marker = new google.maps.Marker({
+                position: pos,
+                map: this.googleMapBuilder,
+                label: {
+                  text: String(s.order_index + 1),
+                  color: "#ffffff",
+                  fontWeight: "bold"
+                },
+                icon: {
+                  path: google.maps.SymbolPath.CIRCLE,
+                  scale: 13,
+                  fillColor: "#10b981", 
+                  fillOpacity: 1,
+                  strokeColor: "#030303",
+                  strokeWeight: 3
+                }
+              });
+
+              this.builderMarkers.push(marker);
+              bounds.extend(pos);
+            }
+          }
+
+          if (routeStops.length >= 2) {
+            try {
+              const route = await this.computeNewRoute(routeStops);
+              const path = google.maps.geometry.encoding.decodePath(route.polyline.encodedPolyline);
+              
+              const polyline = new google.maps.Polyline({
+                path: path,
+                geodesic: true,
+                strokeColor: '#10b981',
+                strokeOpacity: 0.85,
+                strokeWeight: 5,
+                map: this.googleMapBuilder
+              });
+              this.builderPolylines.push(polyline);
+
+              const distMeters = route.distanceMeters || 0;
+              const durationSec = parseInt(route.duration) || 0;
+
+              const distanceKm = (distMeters / 1000).toFixed(1);
+              const hrs = Math.floor(durationSec / 3600);
+              const mins = Math.round((durationSec % 3600) / 60);
+
+              this.roadTripMetrics = {
+                distance: distanceKm + ' km',
+                duration: hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`
+              };
+            } catch (err) {
+              console.error("Route plotter error:", err);
+              this.roadTripMetrics = null;
+            }
+          } else {
+            this.roadTripMetrics = null;
+            if (routeStops.length === 1) {
+              this.googleMapBuilder.setCenter(routeStops[0]);
+              this.googleMapBuilder.setZoom(6);
+            }
+          }
+
+          if (this.builderMarkers.length > 0 && routeStops.length !== 1) {
+            this.googleMapBuilder.fitBounds(bounds);
+          }
+        },
+
+        async computeNewRoute(routeStops) {
+          let apiKey = config.getGoogleMapsKey();
+          const scripts = document.querySelectorAll('script');
+          for (let s of scripts) {
+            if (s.src && s.src.includes('key=')) {
+              const match = s.src.match(/key=([^&]+)/);
+              if (match) {
+                apiKey = match[1];
+                break;
+              }
+            }
+          }
+
+          const url = 'https://routes.googleapis.com/directions/v2:computeRoutes';
+          const origin = routeStops[0];
+          const dest = routeStops[routeStops.length - 1];
+
+          const intermediates = [];
+          for (let i = 1; i < routeStops.length - 1; i++) {
+            intermediates.push({
+              location: {
+                latLng: {
+                  latitude: routeStops[i].lat,
+                  longitude: routeStops[i].lng
+                }
+              }
+            });
+          }
+
+          const body = {
+            origin: {
+              location: {
+                latLng: {
+                  latitude: origin.lat,
+                  longitude: origin.lng
+                }
+              }
+            },
+            destination: {
+              location: {
+                latLng: {
+                  latitude: dest.lat,
+                  longitude: dest.lng
+                }
+              }
+            },
+            travelMode: 'DRIVE',
+            routingPreference: 'TRAFFIC_UNAWARE'
+          };
+
+          if (intermediates.length > 0) {
+            body.intermediates = intermediates;
+          }
+
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Goog-Api-Key': apiKey,
+              'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline'
+            },
+            body: JSON.stringify(body)
+          });
+
+          if (!res.ok) throw new Error('Routes API failed');
+          const data = await res.json();
+          if (!data.routes || data.routes.length === 0) throw new Error('No route returned');
+          return data.routes[0];
+        },
+
+        async centerMapOnSelectedStop() {
+          if (!this.googleMapView || !this.selectedStop) return;
+
+          const query = `${this.selectedStop.city_name}, ${this.selectedStop.country}`;
+          const coords = await this.geocodeAddress(query);
+
+          if (coords) {
+            const pos = { lat: coords.lat, lng: coords.lon };
+            this.googleMapView.setCenter(pos);
+            this.googleMapView.setZoom(12);
+
+            if (this.activeStopMarker) {
+              this.activeStopMarker.setMap(null);
+            }
+
+            this.activeStopMarker = new google.maps.Marker({
+              position: pos,
+              map: this.googleMapView,
+              title: this.selectedStop.city_name,
+              icon: {
+                path: google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,
+                scale: 7,
+                fillColor: "#10b981", 
+                fillOpacity: 1,
+                strokeColor: "#030303",
+                strokeWeight: 2
+              }
+            });
+
+            this.discoverNeighborhoodSights(pos);
+          }
+        },
+
+        async discoverNeighborhoodSights(location) {
+          this.viewNearbyPlaces = [];
+          
+          try {
+            // Check if New Places API is available
+            if (google.maps.places && google.maps.places.Place && typeof google.maps.places.Place.searchNearby === 'function') {
+              const request = {
+                fields: ['displayName', 'location', 'rating', 'types', 'primaryType', 'shortFormattedAddress'],
+                locationRestriction: {
+                  center: location,
+                  radius: 1500
+                },
+                includedTypes: ['tourist_attraction', 'restaurant', 'park', 'museum'],
+                maxResultCount: 10
+              };
+
+              const { places } = await google.maps.places.Place.searchNearby(request);
+              if (places && places.length > 0) {
+                this.viewNearbyPlaces = places.map(p => ({
+                  name: p.displayName || '',
+                  rating: p.rating || 'N/A',
+                  vicinity: p.shortFormattedAddress || 'Nearby',
+                  type: p.primaryType || (p.types && p.types[0] ? p.types[0].replace(/_/g, ' ') : 'attraction')
+                }));
+                this.$nextTick(() => refreshIcons());
+                return;
+              }
+            }
+          } catch (err) {
+            console.warn("New Places SearchNearby failed, falling back to legacy PlacesService:", err);
+          }
+
+          // Fallback to legacy PlacesService
+          if (this.placesService) {
+            const request = {
+              location: location,
+              radius: '1500',
+              type: ['tourist_attraction', 'restaurant', 'park', 'museum']
+            };
+
+            this.placesService.nearbySearch(request, (results, status) => {
+              if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+                this.viewNearbyPlaces = results.slice(0, 10).map(r => ({
+                  name: r.name,
+                  rating: r.rating || 'N/A',
+                  vicinity: r.vicinity || 'Nearby',
+                  type: r.types[0].replace(/_/g, ' ')
+                }));
+                this.$nextTick(() => refreshIcons());
+              }
+            });
+          }
+        },
+
+        toggleViewStreetView() {
+          if (!this.selectedStop) return;
+          this.viewStreetViewActive = !this.viewStreetViewActive;
+
+          this.$nextTick(async () => {
+            if (this.viewStreetViewActive) {
+              const query = `${this.selectedStop.city_name}, ${this.selectedStop.country}`;
+              const coords = await this.geocodeAddress(query);
+              if (coords) {
+                const svPanel = document.getElementById('view-streetview');
+                this.streetViewPanorama = new google.maps.StreetViewPanorama(svPanel, {
+                  position: { lat: coords.lat, lng: coords.lon },
+                  pov: { heading: 180, pitch: 0 }
+                });
+                this.googleMapView.setStreetView(this.streetViewPanorama);
+              }
+            } else {
+              this.googleMapView.setStreetView(null);
+            }
+            refreshIcons();
+          });
+        },
+
+        async toggleView3DRotation() {
+          if (!this.selectedStop) return;
+          this.view3DActive = !this.view3DActive;
+
+          if (this.view3DActive) {
+            const query = `${this.selectedStop.city_name}, ${this.selectedStop.country}`;
+            const coords = await this.geocodeAddress(query);
+            if (coords) {
+              const pos = { lat: coords.lat, lng: coords.lon };
+              this.googleMapView.setMapTypeId(google.maps.MapTypeId.SATELLITE);
+              this.googleMapView.setTilt(45);
+              this.googleMapView.setZoom(18);
+              this.googleMapView.setCenter(pos);
+
+              let heading = 0;
+              this.aerialRotationInterval = setInterval(() => {
+                heading = (heading + 2.5) % 360;
+                this.googleMapView.setHeading(heading);
+              }, 120);
+              showToast("Cinematic 3D Rotation active", "success");
+            }
+          } else {
+            clearInterval(this.aerialRotationInterval);
+            this.googleMapView.setMapTypeId(google.maps.MapTypeId.ROADMAP);
+            this.googleMapView.setTilt(0);
+            this.googleMapView.setZoom(12);
+            showToast("Returned to roadmap", "info");
+          }
+        },
+
+        async addPlaceToItinerary(place) {
+          try {
+            const actData = {
+              stop_id: this.selectedStop.id,
+              day_number: this.selectedDay,
+              name: place.name,
+              category: place.type.includes('restaurant') || place.type.includes('food') ? 'food' : 'sightseeing',
+              cost: 0.00,
+              duration: 90, 
+              notes: `[10:00 - 11:30] Attraction near: ${place.vicinity}`
+            };
+
+            await createActivity(actData);
+            showToast(`Added: ${place.name}!`);
+            await this.loadStopsData();
+          } catch(e) {
+            showToast("Failed to add: " + e.message, "error");
+          }
+        },
+
+
+        // --- STOPS ACTIONS (TAB 1) ---
+        get totalAllocatedBudget() {
+          return this.stops.reduce((sum, s) => sum + (parseFloat(s.budget) || 0), 0);
+        },
+
+        validateStopDates() {
+          if (!this.trip) return;
+          this.stopDateError = false;
+          
+          const tripStart = new Date(this.trip.start_date);
+          const tripEnd = new Date(this.trip.end_date);
+          const arrival = new Date(this.stopArrival);
+          const departure = new Date(this.stopDeparture);
+
+          if (arrival < tripStart || arrival > tripEnd) {
+            showToast("Arrival date must be within trip dates.", "error");
+            this.stopDateError = true;
+            return;
+          }
+
+          if (departure < tripStart || departure > tripEnd) {
+            showToast("Departure date must be within trip dates.", "error");
+            this.stopDateError = true;
+            return;
+          }
+
+          if (departure < arrival) {
+            showToast("Departure cannot be before arrival.", "error");
+            this.stopDateError = true;
+          }
+        },
+
+        startEditStop(stop) {
+          this.editingStopId = stop.id;
+          this.stopCity = stop.city_name;
+          this.stopCountry = stop.country;
+          this.stopArrival = stop.start_date;
+          this.stopDeparture = stop.end_date;
+          this.stopBudget = stop.budget;
+
+          const autocompleteEl = document.getElementById('stop-city-input');
+          if (autocompleteEl && typeof autocompleteEl.setInputValue === 'function') {
+            autocompleteEl.setInputValue(stop.city_name);
+          }
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        },
+
+        resetStopForm() {
+          this.editingStopId = null;
+          this.stopCity = '';
+          this.stopCountry = '';
+          this.stopArrival = this.trip ? this.trip.start_date : '';
+          this.stopDeparture = this.trip ? this.trip.start_date : '';
+          this.stopBudget = '';
+          this.stopDateError = false;
+
+          const autocompleteEl = document.getElementById('stop-city-input');
+          if (autocompleteEl && typeof autocompleteEl.setInputValue === 'function') {
+            autocompleteEl.setInputValue('');
+          }
+        },
+
+        async saveStop() {
+          if (this.stopDateError) return;
+          this.submittingStop = true;
+          try {
+            const stopData = {
+              trip_id: this.tripId,
+              city_name: this.stopCity,
+              country: this.stopCountry,
+              start_date: this.stopArrival,
+              end_date: this.stopDeparture,
+              budget: parseFloat(this.stopBudget) || 0
+            };
+
+            if (this.editingStopId) {
+              await updateStop(this.editingStopId, stopData);
+              showToast("Destination updated successfully!");
+            } else {
+              await createStop(stopData);
+              showToast("New destination stop added!");
+            }
+
+            this.resetStopForm();
+            await this.loadStopsData();
+          } catch(e) {
+            showToast("Failed to save stop: " + e.message, "error");
+          } finally {
+            this.submittingStop = false;
+          }
+        },
+
+        async deleteStopHandler(stopId) {
+          if (confirm("Are you sure you want to delete this stop? This will clear all its activities.")) {
+            try {
+              await deleteStop(stopId, this.tripId);
+              showToast("Destination removed");
+              await this.loadStopsData();
+            } catch (e) {
+              showToast("Error deleting: " + e.message, "error");
+            }
+          }
+        },
+
+        async moveStop(index, direction) {
+          const targetIndex = index + direction;
+          if (targetIndex < 0 || targetIndex >= this.stops.length) return;
+
+          const temp = this.stops[index];
+          this.stops[index] = this.stops[targetIndex];
+          this.stops[targetIndex] = temp;
+
+          try {
+            const orderedIds = this.stops.map(s => s.id);
+            await reorderStops(orderedIds);
+            showToast("Stops order updated");
+            await this.loadStopsData();
+          } catch (e) {
+            showToast("Failed to reorder: " + e.message, "error");
+            await this.loadStopsData();
+          }
+        },
+
+        promptBudget(stop) {
+          this.budgetModalStopId = stop.id;
+          this.budgetModalStopCity = stop.city_name;
+          this.budgetModalAmount = parseFloat(stop.budget) || 0;
+          this.budgetModalOpen = true;
+          this.$nextTick(() => refreshIcons());
+        },
+
+        async saveBudgetAllocation() {
+          try {
+            const stop = this.stops.find(s => s.id === this.budgetModalStopId);
+            if (!stop) return;
+            
+            const updated = await updateStop(this.budgetModalStopId, {
+              ...stop,
+              budget: parseFloat(this.budgetModalAmount) || 0
+            });
+            
+            showToast(`Budget for ${this.budgetModalStopCity} set to $${updated.budget}`);
+            this.budgetModalOpen = false;
+            await this.loadStopsData();
+          } catch (e) {
+            showToast("Failed to update budget: " + e.message, "error");
+          }
+        },
+
+
+        // --- ACTIVITIES ACTIONS (TAB 2) ---
+        get stopDays() {
+          if (!this.selectedStop) return [];
+          const daysCount = this.calculateDays(this.selectedStop.start_date, this.selectedStop.end_date);
+          const days = [];
+          for (let i = 1; i <= daysCount; i++) days.push(i);
+          return days;
+        },
+
+        get dayActivities() {
+          if (!this.selectedStop) return [];
+          return this.activities.filter(a => a.stop_id === this.selectedStop.id && a.day_number === this.selectedDay);
+        },
+
+        get stopTotalCost() {
+          return this.dayActivities.reduce((sum, act) => sum + (parseFloat(act.cost) || 0), 0);
+        },
+
+        get isOverBudget() {
+          if (!this.selectedStop) return false;
+          return this.stopTotalCost > parseFloat(this.selectedStop.budget);
+        },
+
+        startEditActivity(act) {
+          this.editingActivityId = act.id;
+          this.actName = act.name;
+          this.actCategory = act.category;
+          this.actCost = act.cost;
+          this.actDuration = act.duration || 90;
+          
+          let startTime = '09:00';
+          let endTime = '10:30';
+          if (act.notes) {
+            const match = act.notes.match(/^\[(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})\]/);
+            if (match) {
+              startTime = match[1];
+              endTime = match[2];
+            }
+          }
+          this.actStartTime = startTime;
+          this.actEndTime = endTime;
+          this.actNotes = act.notes ? act.notes.replace(/^\[\d{2}:\d{2}\s*-\s*\d{2}:\d{2}\]\s*/, '') : '';
+          this.activityFormOpen = true;
+        },
+
+        resetActivityForm() {
+          this.editingActivityId = null;
+          this.actName = '';
+          this.actCategory = 'sightseeing';
+          this.actCost = '';
+          this.actDuration = 90;
+          this.actNotes = '';
+          this.actStartTime = '09:00';
+          this.actEndTime = '10:30';
+        },
+
+        calculateDurationFromTimes() {
+          if (!this.actStartTime || !this.actEndTime) return;
+          const [startH, startM] = this.actStartTime.split(':').map(Number);
+          const [endH, endM] = this.actEndTime.split(':').map(Number);
+          
+          let startMins = startH * 60 + startM;
+          let endMins = endH * 60 + endM;
+
+          if (endMins < startMins) {
+            endMins += 24 * 60; // Overnight
+          }
+
+          this.actDuration = endMins - startMins;
+        },
+
+        hasTimeRange(notes) {
+          if (!notes) return false;
+          return /^\[\d{2}:\d{2}\s*-\s*\d{2}:\d{2}\]/.test(notes);
+        },
+
+        parseTimeRange(notes) {
+          if (!notes) return '';
+          const match = notes.match(/^\[(\d{2}):(\d{2})\s*-\s*(\d{2}):(\d{2})\]/);
+          if (!match) return '';
+          
+          const format12Hr = (hStr, mStr) => {
+            const h = parseInt(hStr);
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            const displayH = h % 12 === 0 ? 12 : h % 12;
+            return `${displayH}:${mStr} ${ampm}`;
+          };
+
+          return `${format12Hr(match[1], match[2])} – ${format12Hr(match[3], match[4])}`;
+        },
+
+        cleanNotes(notes) {
+          if (!notes) return '';
+          return notes.replace(/^\[\d{2}:\d{2}\s*-\s*\d{2}:\d{2}\]\s*/, '').trim();
+        },
+
+        async saveActivityHandler() {
+          if (!this.selectedStop) return;
+          this.submittingActivity = true;
+          try {
+            let finalNotes = this.actNotes;
+            if (this.actStartTime && this.actEndTime) {
+              this.calculateDurationFromTimes();
+              const cleanNotesStr = this.actNotes.replace(/^\[\d{2}:\d{2}\s*-\s*\d{2}:\d{2}\]\s*/, '');
+              finalNotes = `[${this.actStartTime} - ${this.actEndTime}] ${cleanNotesStr}`.trim();
+            }
+
+            const actData = {
+              stop_id: this.selectedStop.id,
+              day_number: this.selectedDay,
+              name: this.actName,
+              category: this.actCategory,
+              cost: parseFloat(this.actCost) || 0,
+              duration: parseInt(this.actDuration) || null,
+              notes: finalNotes
+            };
+
+            if (this.editingActivityId) {
+              await updateActivity(this.editingActivityId, actData);
+              showToast("Activity updated successfully!");
+            } else {
+              await createActivity(actData);
+              showToast("New activity scheduled!");
+            }
+
+            this.resetActivityForm();
+            this.activityFormOpen = false;
+            await this.loadStopsData();
+          } catch(e) {
+            showToast("Failed to save activity: " + e.message, "error");
+          } finally {
+            this.submittingActivity = false;
+          }
+        },
+
+        async deleteActivityHandler(id) {
+          if (confirm("Are you sure you want to remove this activity?")) {
+            try {
+              await deleteActivity(id);
+              showToast("Activity deleted");
+              await this.loadStopsData();
+            } catch(e) {
+              showToast("Error deleting: " + e.message, "error");
+            }
+          }
+        },
+
+
+        // --- CALENDAR MONTH VIEWS (TAB 3) ---
+        compileTimeline() {
+          if (!this.trip) return;
+          const tripStart = new Date(this.trip.start_date);
+          const tripEnd = new Date(this.trip.end_date);
+          const totalDays = Math.ceil((tripEnd - tripStart) / (1000 * 60 * 60 * 24)) + 1;
+          const daysArray = [];
+
+          for (let i = 0; i < totalDays; i++) {
+            const currentDate = new Date(tripStart.getTime() + i * 24 * 60 * 60 * 1000);
+            const currentDateStr = currentDate.toISOString().split('T')[0];
+
+            const matchingStop = this.stops.find(s => s.start_date <= currentDateStr && currentDateStr <= s.end_date);
+            let dayActs = [];
+            let stopDayNumber = null;
+
+            if (matchingStop) {
+              const stopStart = new Date(matchingStop.start_date);
+              stopDayNumber = Math.ceil((currentDate - stopStart) / (1000 * 60 * 60 * 24)) + 1;
+              dayActs = this.activities.filter(a => a.stop_id === matchingStop.id && a.day_number === stopDayNumber);
+            }
+
+            daysArray.push({
+              dayIndex: i + 1,
+              date: currentDateStr,
+              stop: matchingStop || null,
+              stopDayNumber: stopDayNumber,
+              activities: dayActs
+            });
+          }
+
+          this.timeline = daysArray;
+        },
+
+        buildMonthGrid() {
+          if (!this.trip) return;
+          const start = new Date(this.trip.start_date);
+          if (this.currentMonth === null) {
+            this.currentMonth = start.getMonth();
+            this.currentYear = start.getFullYear();
+          }
+          this.renderMonthDays();
+        },
+
+        renderMonthDays() {
+          const firstDayOfMonth = new Date(this.currentYear, this.currentMonth, 1);
+          const lastDayOfMonth = new Date(this.currentYear, this.currentMonth + 1, 0);
+          
+          const startDayOfWeek = firstDayOfMonth.getDay(); 
+          const daysInMonth = lastDayOfMonth.getDate();
+          
+          const weeks = [];
+          let currentWeek = Array(7).fill(null);
+          
+          const prevMonthLastDay = new Date(this.currentYear, this.currentMonth, 0).getDate();
+          for (let i = 0; i < startDayOfWeek; i++) {
+            currentWeek[i] = {
+              day: prevMonthLastDay - startDayOfWeek + i + 1,
+              isCurrentMonth: false,
+              dateStr: null
+            };
+          }
+          
+          let dayCounter = 1;
+          for (let i = startDayOfWeek; i < 7; i++) {
+            const dateStr = `${this.currentYear}-${String(this.currentMonth + 1).padStart(2, '0')}-${String(dayCounter).padStart(2, '0')}`;
+            currentWeek[i] = {
+              day: dayCounter,
+              isCurrentMonth: true,
+              dateStr: dateStr,
+              dayData: this.timeline?.find(d => d.date === dateStr) || null
+            };
+            dayCounter++;
+          }
+          weeks.push(currentWeek);
+          
+          while (dayCounter <= daysInMonth) {
+            currentWeek = Array(7).fill(null);
+            for (let i = 0; i < 7; i++) {
+              if (dayCounter <= daysInMonth) {
+                const dateStr = `${this.currentYear}-${String(this.currentMonth + 1).padStart(2, '0')}-${String(dayCounter).padStart(2, '0')}`;
+                currentWeek[i] = {
+                  day: dayCounter,
+                  isCurrentMonth: true,
+                  dateStr: dateStr,
+                  dayData: this.timeline?.find(d => d.date === dateStr) || null
+                };
+                dayCounter++;
+              } else {
+                const nextMonthDay = dayCounter - daysInMonth;
+                currentWeek[i] = {
+                  day: nextMonthDay,
+                  isCurrentMonth: false,
+                  dateStr: null
+                };
+                dayCounter++;
+              }
+            }
+            weeks.push(currentWeek);
+          }
+          this.calendarWeeks = weeks;
+        },
+
+        changeMonth(dir) {
+          this.currentMonth += dir;
+          if (this.currentMonth < 0) {
+            this.currentMonth = 11;
+            this.currentYear--;
+          } else if (this.currentMonth > 11) {
+            this.currentMonth = 0;
+            this.currentYear++;
+          }
+          this.renderMonthDays();
+          refreshIcons();
+        },
+
+        selectMonthDay(dayData) {
+          this.selectedDayData = dayData;
+          refreshIcons();
+        },
+
+
+        // --- BUDGET ANALYTICS (TAB 4) ---
+        loadBudgetDetails() {
+          if (this.activeTab !== 'budget' || this.stops.length === 0) return;
+
+          // Pure math computations
+          const catData = calculateCategoryBreakdown(this.activities);
+          this.stopSummaries = calculateStopCosts(this.stops, this.activities);
+          this.summary = calculateTripSummary(this.stops, this.activities);
+
+          // Draw the Chart.js doughnut
+          this.$nextTick(() => {
+            const canvasEl = document.getElementById('categoryChart');
+            if (!canvasEl) return;
+            const ctx = canvasEl.getContext('2d');
+            if (ctx) {
+              if (categoryChartInstance) categoryChartInstance.destroy();
+              categoryChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                  labels: ['Lodging', 'Food', 'Transport', 'Sightseeing', 'Entertainment', 'Other'],
+                  datasets: [{
+                    data: [
+                      catData.lodging,
+                      catData.food,
+                      catData.transport,
+                      catData.sightseeing,
+                      catData.entertainment,
+                      catData.other
+                    ],
+                    backgroundColor: [
+                      '#c084fc', // Lodging - purple
+                      '#fb923c', // Food - orange
+                      '#60a5fa', // Transport - blue
+                      '#34d399', // Sightseeing - emerald
+                      '#f472b6', // Entertainment - pink
+                      '#a3a3a3'  // Other - gray
+                    ],
+                    borderWidth: 1.5,
+                    borderColor: '#09090b',
+                    hoverOffset: 8
+                  }]
+                },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: {
+                      position: 'right',
+                      labels: {
+                        color: '#d4d4d4',
+                        font: { size: 10, family: 'Inter' },
+                        boxWidth: 12
+                      }
+                    }
+                  }
+                }
+              });
+            }
+          });
+        },
+
+
+        // --- FORMATTERS ---
+        formatDate(dateStr) {
+          if (!dateStr) return '';
+          const opt = { month: 'short', day: 'numeric', year: 'numeric' };
+          return new Date(dateStr).toLocaleDateString(undefined, opt);
+        },
+
+        formatDateRange(start, end) {
+          if (!start || !end) return '';
+          const opt = { month: 'short', day: 'numeric' };
+          const s = new Date(start).toLocaleDateString(undefined, opt);
+          const e = new Date(end).toLocaleDateString(undefined, { ...opt, year: 'numeric' });
+          return `${s} — ${e}`;
+        },
+
+        calculateDays(start, end) {
+          if (!start || !end) return 0;
+          const s = new Date(start);
+          const e = new Date(end);
+          const diffTime = Math.abs(e - s);
+          return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        },
+
+        formatDuration(minutes) {
+          if (!minutes) return '';
+          if (minutes >= 60) {
+            const hrs = Math.floor(minutes / 60);
+            const mins = minutes % 60;
+            return mins > 0 ? `${hrs}h ${mins}m` : `${hrs}h`;
+          }
+          return `${minutes}m`;
+        },
+
+        formatCategoryLabel(cat) {
+          const labels = {
+            sightseeing: 'Sightseeing',
+            food: 'Food & Dining',
+            transport: 'Transport',
+            lodging: 'Lodging',
+            entertainment: 'Entertainment',
+            other: 'Other'
+          };
+          return labels[cat] || 'Other';
+        },
+
+        getCategoryIcon(cat) {
+          const icons = {
+            sightseeing: 'compass',
+            food: 'utensils',
+            transport: 'plane',
+            lodging: 'bed',
+            entertainment: 'ticket',
+            other: 'star'
+          };
+          return icons[cat] || 'star';
+        },
+
+        getCategoryBg(cat) {
+          const bgs = {
+            sightseeing: 'bg-emerald-500/10 text-emerald-450',
+            food: 'bg-orange-500/10 text-orange-400',
+            transport: 'bg-blue-500/10 text-blue-455',
+            lodging: 'bg-purple-500/10 text-purple-400',
+            entertainment: 'bg-pink-500/10 text-pink-400',
+            other: 'bg-neutral-800 text-neutral-350'
+          };
+          return bgs[cat] || bgs.other;
+        }
+
+      }));
+    };
+
+    if (window.Alpine) {
+      initWorkspacePage();
+    } else {
+      document.addEventListener('alpine:init', initWorkspacePage);
+    }
+  </script>
+  <!-- AlpineJS -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</body>
+</html>

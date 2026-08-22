@@ -1,0 +1,222 @@
+{
+  "Paris": [
+    {
+      "name": "Eiffel Tower Summit Access",
+      "category": "sightseeing",
+      "cost": 30,
+      "duration": 120,
+      "notes": "Book sunset slot in advance online."
+    },
+    {
+      "name": "Louvre Museum Tour",
+      "category": "sightseeing",
+      "cost": 22,
+      "duration": 180,
+      "notes": "Closed on Tuesdays. See the Mona Lisa early."
+    },
+    {
+      "name": "Champs-Élysées Bistro Dinner",
+      "category": "food",
+      "cost": 65,
+      "duration": 90,
+      "notes": "Classic French cuisine with steak frites."
+    },
+    {
+      "name": "Seine River Dinner Cruise",
+      "category": "entertainment",
+      "cost": 85,
+      "duration": 150,
+      "notes": "Includes 3-course meal and live music."
+    },
+    {
+      "name": "Metro 3-Day Pass",
+      "category": "transport",
+      "cost": 28,
+      "duration": 0,
+      "notes": "Unlimited travel in zones 1-3."
+    },
+    {
+      "name": "Boutique Hotel in Marais",
+      "category": "lodging",
+      "cost": 180,
+      "duration": 0,
+      "notes": "Cozy room in historic district."
+    }
+  ],
+  "Tokyo": [
+    {
+      "name": "TeamLab Planets Digital Art",
+      "category": "sightseeing",
+      "cost": 26,
+      "duration": 120,
+      "notes": "Barefoot immersive art experience."
+    },
+    {
+      "name": "Shibuya Sky Observatory",
+      "category": "sightseeing",
+      "cost": 15,
+      "duration": 90,
+      "notes": "Best view of Shibuya Crossing."
+    },
+    {
+      "name": "Omaakse Sushi Experience",
+      "category": "food",
+      "cost": 120,
+      "duration": 120,
+      "notes": "Fresh premium sushi served piece by piece."
+    },
+    {
+      "name": "Robot Show / Shinjuku Bar Hop",
+      "category": "entertainment",
+      "cost": 45,
+      "duration": 180,
+      "notes": "Tour Golden Gai's tiny bars."
+    },
+    {
+      "name": "JR Whole Japan Rail Pass (7 days)",
+      "category": "transport",
+      "cost": 350,
+      "duration": 0,
+      "notes": "Unlimited bullet train travel."
+    },
+    {
+      "name": "Capsule Hotel Shinjuku",
+      "category": "lodging",
+      "cost": 40,
+      "duration": 0,
+      "notes": "High-tech modular sleeping cabins."
+    }
+  ],
+  "New York City": [
+    {
+      "name": "Empire State Building Deck",
+      "category": "sightseeing",
+      "cost": 44,
+      "duration": 90,
+      "notes": "Sunset over Manhattan skyline."
+    },
+    {
+      "name": "Broadway Show: The Lion King",
+      "category": "entertainment",
+      "cost": 110,
+      "duration": 150,
+      "notes": "Book orchestra seats in advance."
+    },
+    {
+      "name": "Chelsea Market Food Crawl",
+      "category": "food",
+      "cost": 50,
+      "duration": 120,
+      "notes": "Tacos, lobster rolls, and artisanal gelato."
+    },
+    {
+      "name": "Statue of Liberty & Ellis Island",
+      "category": "sightseeing",
+      "cost": 25,
+      "duration": 240,
+      "notes": "Includes ferry ride and crown access if booked early."
+    },
+    {
+      "name": "MTA MetroCard Weekly Pass",
+      "category": "transport",
+      "cost": 34,
+      "duration": 0,
+      "notes": "Unlimited subways and local buses."
+    },
+    {
+      "name": "Times Square High-Rise Hotel",
+      "category": "lodging",
+      "cost": 250,
+      "duration": 0,
+      "notes": "Stunning city views from 30th floor."
+    }
+  ],
+  "Bali": [
+    {
+      "name": "Ubud Sacred Monkey Forest",
+      "category": "sightseeing",
+      "cost": 6,
+      "duration": 120,
+      "notes": "Watch out for mischievous macaques."
+    },
+    {
+      "name": "Mt. Batur Sunrise Trekking",
+      "category": "sightseeing",
+      "cost": 35,
+      "duration": 360,
+      "notes": "Includes local guide and hot breakfast at the peak."
+    },
+    {
+      "name": "Balinese Cooking Class",
+      "category": "food",
+      "cost": 25,
+      "duration": 180,
+      "notes": "Learn to make authentic spices and satay."
+    },
+    {
+      "name": "Scuba Diving in Nusa Penida",
+      "category": "entertainment",
+      "cost": 75,
+      "duration": 300,
+      "notes": "Swim with giant Manta Rays."
+    },
+    {
+      "name": "Private Driver (Full Day)",
+      "category": "transport",
+      "cost": 40,
+      "duration": 0,
+      "notes": "Air-conditioned car with local guide."
+    },
+    {
+      "name": "Eco-Luxury Bamboo Villa",
+      "category": "lodging",
+      "cost": 95,
+      "duration": 0,
+      "notes": "Surrounded by lush rice terraces."
+    }
+  ],
+  "Rome": [
+    {
+      "name": "Colosseum & Roman Forum",
+      "category": "sightseeing",
+      "cost": 24,
+      "duration": 180,
+      "notes": "Includes audio guide. Fast-track entry."
+    },
+    {
+      "name": "Vatican Museums & Sistine Chapel",
+      "category": "sightseeing",
+      "cost": 30,
+      "duration": 240,
+      "notes": "Dress code strictly enforced (shoulders & knees covered)."
+    },
+    {
+      "name": "Trastevere Food Tour",
+      "category": "food",
+      "cost": 55,
+      "duration": 180,
+      "notes": "Try authentic carbonara, pizza, and local wines."
+    },
+    {
+      "name": "Opera in Church of St. Paul",
+      "category": "entertainment",
+      "cost": 40,
+      "duration": 120,
+      "notes": "Opera highlights inside a historic cathedral."
+    },
+    {
+      "name": "Hop-On Hop-Off Bus Tour",
+      "category": "transport",
+      "cost": 22,
+      "duration": 0,
+      "notes": "24-hour pass for major sights."
+    },
+    {
+      "name": "Charming Roman B&B",
+      "category": "lodging",
+      "cost": 110,
+      "duration": 0,
+      "notes": "Walking distance from Spanish Steps."
+    }
+  ]
+}

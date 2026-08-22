@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GlobeTrotter — Multi-City Travel Planner</title>
+  <meta name="description" content="Plan your next multi-city adventure with GlobeTrotter. Budget tracking, activities timeline, and easy itinerary sharing.">
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            neutral: {
+              950: '#030303',
+              900: '#09090b',
+              850: '#121215',
+              800: '#18181b',
+              700: '#27272a',
+              600: '#3f3f46',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/custom.css">
+  <!-- Supabase CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+  </style>
+</head>
+<body class="h-full bg-neutral-950 text-neutral-100 flex flex-col page-fade-in" x-data="authPage" x-init="initPage()">
+
+  <!-- Top Loading Progress Bar -->
+  <div id="top-loading-bar" class="fixed top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 z-50 transition-all ease-out" style="width: 0%; opacity: 0; transition-duration: 0ms;"></div>
+
+  <!-- Toast notifications will be injected here by showToast -->
+
+  <main class="flex-grow flex items-center justify-center p-4 relative overflow-hidden">
+    <!-- Abstract glowing gradient blobs -->
+    <div class="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full bg-emerald-500/10 blur-[120px] pointer-events-none"></div>
+    <div class="absolute bottom-1/4 right-1/4 translate-x-1/2 translate-y-1/2 w-80 h-80 rounded-full bg-blue-500/10 blur-[120px] pointer-events-none"></div>
+
+    <div class="w-full max-w-md z-10 flex flex-col items-center">
+      <!-- Logo -->
+      <div class="flex items-center gap-2 text-3xl font-extrabold tracking-tight mb-8">
+        <i data-lucide="compass" class="w-8 h-8 text-emerald-400"></i>
+        <span>Globe<span class="text-emerald-400">Trotter</span></span>
+      </div>
+
+      <!-- Main Login Card -->
+      <div class="w-full glass-panel rounded-2xl border border-neutral-800/80 shadow-2xl p-8 relative overflow-hidden">
+        
+        <!-- Supabase missing alert banner -->
+        <div x-cloak x-show="!isConfigured" class="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-400 text-sm">
+          <div class="flex gap-2">
+            <i data-lucide="alert-circle" class="w-5 h-5 flex-shrink-0"></i>
+            <div>
+              <p class="font-semibold">Supabase is not connected</p>
+              <p class="text-xs text-neutral-300 mt-1">Please click the Database button to enter your connection credentials.</p>
+              <button @click="openSetup()" class="mt-2 text-xs font-semibold px-3 py-1.5 bg-amber-400 text-black rounded-lg hover:bg-amber-300 transition-colors">
+                Configure DB Connection
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Connection Settings Widget Floating Icon -->
+        <div class="absolute top-4 right-4">
+          <button @click="openSetup()" class="p-2 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-white transition-colors" title="Settings">
+            <i data-lucide="settings" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <!-- Switch Tabs -->
+        <div class="flex border-b border-neutral-800 mb-6">
+          <button @click="tab = 'login'" 
+            :class="tab === 'login' ? 'border-b-2 border-emerald-400 text-white font-semibold' : 'text-neutral-400 hover:text-neutral-200'"
+            class="flex-1 pb-3 text-sm transition-all focus:outline-none">
+            Sign In
+          </button>
+          <button @click="tab = 'signup'" 
+            :class="tab === 'signup' ? 'border-b-2 border-emerald-400 text-white font-semibold' : 'text-neutral-400 hover:text-neutral-200'"
+            class="flex-1 pb-3 text-sm transition-all focus:outline-none">
+            Register
+          </button>
+        </div>
+
+        <!-- Sign In Form -->
+        <form x-cloak x-show="tab === 'login'" @submit.prevent="handleLogin" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">Email Address</label>
+            <div class="relative">
+              <input type="email" x-model="loginEmail" required placeholder="name@example.com" 
+                class="w-full bg-neutral-900 border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all">
+              <i data-lucide="mail" class="w-4 h-4 text-neutral-500 absolute left-3.5 top-3.5"></i>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">Password</label>
+            <div class="relative">
+              <input type="password" x-model="loginPassword" required placeholder="••••••••" 
+                class="w-full bg-neutral-900 border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all">
+              <i data-lucide="lock" class="w-4 h-4 text-neutral-500 absolute left-3.5 top-3.5"></i>
+            </div>
+          </div>
+          <button type="submit" :disabled="loading || !isConfigured"
+            class="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-neutral-800 disabled:text-neutral-500 active:scale-95 text-black font-semibold text-sm py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2">
+            <span x-cloak x-show="loading" class="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></span>
+            <i x-show="!loading" data-lucide="log-in" class="w-4 h-4"></i>
+            <span x-text="loading ? 'Authenticating...' : 'Sign In'"></span>
+          </button>
+        </form>
+
+        <!-- Sign Up Form -->
+        <form x-cloak x-show="tab === 'signup'" @submit.prevent="handleRegister" class="space-y-4">
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">First Name</label>
+              <input type="text" x-model="regFirstName" required placeholder="John" 
+                class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">Last Name</label>
+              <input type="text" x-model="regLastName" required placeholder="Doe" 
+                class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all">
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">Email Address</label>
+            <div class="relative">
+              <input type="email" x-model="regEmail" required placeholder="name@example.com" 
+                class="w-full bg-neutral-900 border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all">
+              <i data-lucide="mail" class="w-4 h-4 text-neutral-500 absolute left-3.5 top-3.5"></i>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1.5">Password</label>
+            <div class="relative">
+              <input type="password" x-model="regPassword" required minlength="6" placeholder="Min. 6 characters" 
+                class="w-full bg-neutral-900 border border-neutral-800 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-neutral-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all">
+              <i data-lucide="lock" class="w-4 h-4 text-neutral-500 absolute left-3.5 top-3.5"></i>
+            </div>
+          </div>
+          <button type="submit" :disabled="loading || !isConfigured"
+            class="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-neutral-800 disabled:text-neutral-500 active:scale-95 text-black font-semibold text-sm py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2">
+            <span x-cloak x-show="loading" class="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></span>
+            <i x-show="!loading" data-lucide="user-plus" class="w-4 h-4"></i>
+            <span x-text="loading ? 'Creating Account...' : 'Create Account'"></span>
+          </button>
+        </form>
+        
+        <!-- Quick 1-Click Demo Login -->
+        <div class="mt-6 pt-5 border-t border-neutral-800/80">
+          <button type="button" @click="handleQuickDemo()" :disabled="loading"
+            class="w-full bg-neutral-900 hover:bg-neutral-800 border border-emerald-500/30 text-emerald-400 hover:text-emerald-300 font-semibold text-sm py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg hover:border-emerald-500/60 active:scale-95">
+            <i data-lucide="zap" class="w-4 h-4 text-emerald-400"></i>
+            <span>⚡ Instant Demo Sign In</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="py-6 text-center text-xs text-neutral-600 border-t border-neutral-900">
+    &copy; 2026 GlobeTrotter Planner. Built for LDCE x Odoo Hackathon.
+  </footer>
+
+  <!-- Scripts -->
+  <script type="module">
+    import { config } from './js/config.js';
+    import { getSupabase } from './js/supabase-client.js';
+    import { signIn, signUp, demoSignIn, getSession } from './js/auth.js';
+    import { showToast, injectSetupModal, refreshIcons } from './js/ui-helpers.js';
+
+    const initAuthPage = () => {
+      Alpine.data('authPage', () => ({
+        tab: 'login',
+        loading: false,
+        isConfigured: false,
+
+        loginEmail: '',
+        loginPassword: '',
+
+        regFirstName: '',
+        regLastName: '',
+        regEmail: '',
+        regPassword: '',
+
+        async triggerRedirect(destination, delay = 1000) {
+          const bar = document.getElementById('top-loading-bar');
+          if (bar) {
+            bar.style.transitionDuration = '0ms';
+            bar.style.width = '0%';
+            bar.style.opacity = '1';
+            // Force a browser reflow
+            bar.offsetHeight;
+            bar.style.transitionDuration = `${delay}ms`;
+            bar.style.width = '100%';
+          }
+          await new Promise(resolve => setTimeout(resolve, delay));
+          if (bar) {
+            bar.style.opacity = '0';
+          }
+          window.location.href = destination;
+        },
+
+        async initPage() {
+          this.isConfigured = config.isConfigured();
+          refreshIcons();
+
+          if (!this.isConfigured) {
+            injectSetupModal();
+            return;
+          }
+
+          try {
+            const session = await getSession();
+            if (session) {
+              showToast("Welcome back!", "info");
+              await this.triggerRedirect('dashboard.html', 800);
+            }
+          } catch (err) {
+            console.error("Session fetch error", err);
+          }
+        },
+
+        openSetup() {
+          injectSetupModal(true);
+        },
+
+        async handleQuickDemo() {
+          this.loading = true;
+          try {
+            await demoSignIn();
+            showToast("Signed in as Demo User!");
+            await this.triggerRedirect('dashboard.html', 1000);
+          } catch (err) {
+            showToast("Demo sign in failed", "error");
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        async handleLogin() {
+          this.loading = true;
+          try {
+            await signIn(this.loginEmail, this.loginPassword);
+            showToast("Signed in successfully!");
+            await this.triggerRedirect('dashboard.html', 1000);
+          } catch (err) {
+            showToast(err.message || "Invalid credentials", "error");
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        async handleRegister() {
+          this.loading = true;
+          try {
+            await signUp(this.regEmail, this.regPassword, this.regFirstName, this.regLastName);
+            showToast("Account created successfully!", "success");
+            await this.triggerRedirect('dashboard.html', 1000);
+          } catch (err) {
+            showToast(err.message || "Registration failed", "error");
+          } finally {
+            this.loading = false;
+          }
+        }
+      }));
+    };
+
+    if (window.Alpine) {
+      initAuthPage();
+    } else {
+      document.addEventListener('alpine:init', initAuthPage);
+    }
+  </script>
+  <!-- Alpine.js (Must load AFTER module scripts register components) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</body>
+</html>

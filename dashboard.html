@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GlobeTrotter — Travel Dashboard</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            neutral: {
+              950: '#030303',
+              900: '#09090b',
+              850: '#121215',
+              800: '#18181b',
+              700: '#27272a',
+              600: '#3f3f46',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="css/custom.css">
+  <!-- Supabase CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+  </style>
+</head>
+<body class="bg-neutral-950 text-neutral-100 min-h-screen flex flex-col page-fade-in" x-data="dashboardPage" x-init="initDashboard()">
+
+  <!-- Toast Container and Navbar will be injected automatically -->
+
+  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 relative pb-24" x-cloak x-show="authorized">
+    
+    <!-- Large Hero Banner Image (Screen 3) -->
+    <div class="relative rounded-3xl overflow-hidden mb-8 border border-neutral-800 shadow-2xl h-56 md:h-64">
+      <img src="https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1200&q=80" alt="Scenic Travel Banner" class="w-full h-full object-cover brightness-[0.5]">
+      <div class="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/20 to-transparent"></div>
+      <div class="absolute inset-0 flex flex-col justify-end p-6 md:p-8">
+        <h1 class="text-3xl md:text-4xl font-black tracking-tight text-white">Adventure Dashboard</h1>
+        <p class="text-xs md:text-sm text-neutral-300 max-w-md mt-1.5 leading-relaxed">
+          Create, schedule, and analyze budgets for your multi-city journeys across the globe.
+        </p>
+      </div>
+    </div>
+
+    <!-- Statistics Ribbon -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+      <div class="glass-card rounded-2xl p-6 border border-neutral-800/40">
+        <div class="flex justify-between items-center">
+          <span class="text-xs font-semibold uppercase tracking-wider text-neutral-400">Total Trips</span>
+          <div class="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg">
+            <i data-lucide="map" class="w-5 h-5"></i>
+          </div>
+        </div>
+        <div class="mt-2 flex items-baseline gap-2">
+          <span class="text-3xl font-bold text-white" x-text="stats.totalTrips">0</span>
+          <span class="text-xs text-neutral-500">adventures</span>
+        </div>
+      </div>
+      <div class="glass-card rounded-2xl p-6 border border-neutral-800/40">
+        <div class="flex justify-between items-center">
+          <span class="text-xs font-semibold uppercase tracking-wider text-neutral-400">Destinations</span>
+          <div class="p-2 bg-blue-500/10 text-blue-400 rounded-lg">
+            <i data-lucide="globe" class="w-5 h-5"></i>
+          </div>
+        </div>
+        <div class="mt-2 flex items-baseline gap-2">
+          <span class="text-3xl font-bold text-white" x-text="stats.totalCities">0</span>
+          <span class="text-xs text-neutral-500">cities mapped</span>
+        </div>
+      </div>
+      <div class="glass-card rounded-2xl p-6 border border-neutral-800/40">
+        <div class="flex justify-between items-center">
+          <span class="text-xs font-semibold uppercase tracking-wider text-neutral-400">Allocated Budget</span>
+          <div class="p-2 bg-purple-500/10 text-purple-400 rounded-lg">
+            <i data-lucide="dollar-sign" class="w-5 h-5"></i>
+          </div>
+        </div>
+        <div class="mt-2 flex items-baseline gap-2">
+          <span class="text-3xl font-bold text-white" x-text="'$' + stats.totalBudget.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})">0.00</span>
+          <span class="text-xs text-neutral-500">across stops</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls Toolbar: Search, Group by, Filter, Sort by (Screen 3 & 6 Controls) -->
+    <div class="glass-card rounded-2xl border border-neutral-800/40 p-5 mb-8 flex flex-col md:flex-row gap-4 justify-between items-stretch md:items-center">
+      
+      <!-- Search Input -->
+      <div class="relative flex-grow max-w-md">
+        <input type="text" x-model="searchQuery" placeholder="Search trips by name..."
+          class="w-full bg-neutral-900 border border-neutral-800 rounded-xl pl-10 pr-4 py-2.5 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-emerald-500/50">
+        <i data-lucide="search" class="w-4 h-4 text-neutral-500 absolute left-3.5 top-3"></i>
+      </div>
+
+      <!-- Controls Buttons Group -->
+      <div class="flex items-center gap-2 flex-wrap">
+        
+        <!-- Group by status (Screen 6 categories) -->
+        <button @click="toggleGrouping()" 
+          :class="isGrouped ? 'border-emerald-500/40 text-emerald-400 bg-emerald-500/5' : 'border-neutral-800 text-neutral-400 hover:text-white'"
+          class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-neutral-900 border transition-all flex items-center gap-1.5">
+          <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
+          <span x-text="isGrouped ? 'Grouped by Status' : 'Group by'"></span>
+        </button>
+
+        <!-- Filter -->
+        <div class="relative" x-data="{ open: false }">
+          <button @click="open = !open" 
+            :class="filterStatus !== 'all' ? 'border-emerald-500/40 text-emerald-400 bg-emerald-500/5' : 'border-neutral-800 text-neutral-400 hover:text-white'"
+            class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-neutral-900 border transition-all flex items-center gap-1.5">
+            <i data-lucide="filter" class="w-3.5 h-3.5"></i>
+            <span x-text="filterStatus === 'all' ? 'Filter' : (filterStatus === 'public' ? 'Public Only' : 'Private Only')"></span>
+          </button>
+          <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 mt-2 w-40 rounded-xl border border-neutral-800 bg-neutral-950/95 shadow-2xl p-1 z-30">
+            <button @click="filterStatus = 'all'; open = false" class="w-full text-left px-3 py-2 text-xs hover:bg-neutral-900 rounded-lg text-neutral-300">All Visibility</button>
+            <button @click="filterStatus = 'public'; open = false" class="w-full text-left px-3 py-2 text-xs hover:bg-neutral-900 rounded-lg text-neutral-300">Public Only</button>
+            <button @click="filterStatus = 'private'; open = false" class="w-full text-left px-3 py-2 text-xs hover:bg-neutral-900 rounded-lg text-neutral-300">Private Only</button>
+          </div>
+        </div>
+
+        <!-- Sort by -->
+        <div class="relative" x-data="{ open: false }">
+          <button @click="open = !open" 
+            class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white transition-all flex items-center gap-1.5">
+            <i data-lucide="arrow-up-down" class="w-3.5 h-3.5 text-neutral-400"></i>
+            <span x-text="'Sort: ' + sortByLabel"></span>
+          </button>
+          <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 mt-2 w-40 rounded-xl border border-neutral-800 bg-neutral-950/95 shadow-2xl p-1 z-30">
+            <button @click="sortBy = 'newest'; sortByLabel = 'Newest'; open = false" class="w-full text-left px-3 py-2 text-xs hover:bg-neutral-900 rounded-lg text-neutral-300">Newest</button>
+            <button @click="sortBy = 'oldest'; sortByLabel = 'Oldest'; open = false" class="w-full text-left px-3 py-2 text-xs hover:bg-neutral-900 rounded-lg text-neutral-300">Oldest</button>
+            <button @click="sortBy = 'name'; sortByLabel = 'Trip Name'; open = false" class="w-full text-left px-3 py-2 text-xs hover:bg-neutral-900 rounded-lg text-neutral-300">Trip Name</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Top Regional Selections (Screen 3 Slider/Carousel) -->
+    <div class="mb-8">
+      <h2 class="text-xs font-semibold uppercase tracking-wider text-neutral-500 mb-3 flex items-center gap-1.5">
+        <i data-lucide="compass" class="w-4 h-4 text-emerald-400"></i>
+        <span>Top Regional Selections</span>
+      </h2>
+      <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <template x-for="r in regions">
+          <button @click="selectRegion(r.name)" 
+            :class="selectedRegion === r.name ? 'border-emerald-500 scale-[1.02] bg-neutral-900' : 'border-neutral-850 bg-neutral-950/60 hover:border-neutral-800'"
+            class="rounded-xl p-3 border transition-all flex flex-col items-center justify-center text-center gap-2">
+            <div :class="selectedRegion === r.name ? 'bg-emerald-500/25 text-emerald-400' : 'bg-neutral-900 text-neutral-400'" class="w-10 h-10 rounded-lg flex items-center justify-center">
+              <i :data-lucide="r.icon" class="w-5 h-5"></i>
+            </div>
+            <span class="text-xs font-bold text-white" x-text="r.name"></span>
+          </button>
+        </template>
+      </div>
+      <div x-show="selectedRegion" class="mt-3 flex justify-between items-center">
+        <span class="text-xs text-neutral-400">Filtering trips by region: <strong class="text-white" x-text="selectedRegion"></strong></span>
+        <button @click="selectedRegion = null" class="text-[10px] text-emerald-450 hover:underline">Clear Region Filter</button>
+      </div>
+    </div>
+
+    <!-- Loading Skeleton View -->
+    <div x-show="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <template x-for="i in 3">
+        <div class="glass-card rounded-2xl overflow-hidden border border-neutral-800/40 p-5 flex flex-col gap-4 animate-pulse">
+          <div class="h-40 bg-neutral-800/40 rounded-xl"></div>
+          <div class="h-6 bg-neutral-800/40 rounded w-2/3"></div>
+          <div class="h-4 bg-neutral-800/40 rounded w-1/2"></div>
+        </div>
+      </template>
+    </div>
+
+    <!-- Empty State -->
+    <div x-show="!loading && totalVisibleTripsCount === 0" class="glass-card rounded-2xl border border-neutral-800/60 p-12 text-center flex flex-col items-center justify-center max-w-xl mx-auto my-8">
+      <div class="w-16 h-16 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400 mb-4">
+        <i data-lucide="map-pin" class="w-8 h-8"></i>
+      </div>
+      <h3 class="text-xl font-bold text-white mb-2">No itineraries found</h3>
+      <p class="text-sm text-neutral-400 mb-6 max-w-sm">
+        Start your travel planning by creating your first multi-city adventure.
+      </p>
+      <a href="trip-create.html" class="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-black font-semibold text-sm transition-all">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        <span>Create My First Trip</span>
+      </a>
+    </div>
+
+    <!-- Grouped Trips View (Screen 6 Categories: Ongoing, Upcoming, Completed) -->
+    <div x-show="!loading && isGrouped && totalVisibleTripsCount > 0" class="space-y-8">
+      <template x-for="group in categorizedTrips" :key="group.title">
+        <div class="space-y-4" x-show="group.items.length > 0">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-450 flex items-center gap-2">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            <span x-text="group.title"></span>
+            <span class="text-neutral-500 font-semibold" x-text="'(' + group.items.length + ')'"></span>
+          </h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <template x-for="trip in group.items" :key="trip.id">
+              <div class="glass-card rounded-2xl overflow-hidden border border-neutral-800/40 flex flex-col relative group">
+                <!-- Cover Photo -->
+                <div class="h-44 overflow-hidden relative bg-neutral-900 border-b border-neutral-800/40">
+                  <img :src="trip.cover_photo_url" :alt="trip.name" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                  
+                  <span :class="trip.is_public ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-neutral-800/80 text-neutral-300 border-neutral-700'"
+                    class="absolute top-4 left-4 text-xs font-semibold px-2.5 py-1 rounded-full border backdrop-blur-md flex items-center gap-1.5">
+                    <i :data-lucide="trip.is_public ? 'globe' : 'lock'" class="w-3.5 h-3.5"></i>
+                    <span x-text="trip.is_public ? 'Public' : 'Private'"></span>
+                  </span>
+
+                  <!-- Actions dropdown -->
+                  <div class="absolute top-4 right-4" x-data="{ open: false }">
+                    <button @click.prevent="open = !open" class="p-2 bg-neutral-900/80 hover:bg-neutral-900 border border-neutral-700/50 rounded-lg text-white backdrop-blur-md transition-colors">
+                      <i data-lucide="more-vertical" class="w-4 h-4"></i>
+                    </button>
+                    <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 mt-1 w-36 rounded-xl border border-neutral-800 bg-neutral-950/95 shadow-2xl p-1 z-20">
+                      <button @click="deleteTripHandler(trip.id)" class="w-full flex items-center gap-2 px-3 py-2 text-xs text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors text-left">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete Trip
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Detail Body -->
+                <div class="p-5 flex-grow flex flex-col justify-between">
+                  <div>
+                    <h3 class="text-lg font-bold text-white line-clamp-1" x-text="trip.name"></h3>
+                    <p class="text-xs text-neutral-400 mt-1 flex items-center gap-1.5">
+                      <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                      <span x-text="formatDateRange(trip.start_date, trip.end_date)"></span>
+                    </p>
+                    <p class="text-sm text-neutral-300 mt-3 line-clamp-2" x-text="trip.description || 'No description provided.'"></p>
+                  </div>
+
+                    <div class="grid grid-cols-3 gap-1.5 mt-5">
+                      <a :href="'workspace.html?tripId=' + trip.id + '&tab=stops'" 
+                        class="flex items-center justify-center gap-1.5 py-2 bg-neutral-900 hover:bg-neutral-800 border border-neutral-850 hover:border-neutral-700 text-[10px] font-semibold text-neutral-250 rounded-lg transition-all" title="Manage Stops">
+                        <i data-lucide="map-pin" class="w-3.5 h-3.5 text-emerald-400"></i> Stops
+                      </a>
+                      <a :href="'workspace.html?tripId=' + trip.id + '&tab=timeline'" 
+                        class="flex items-center justify-center gap-1.5 py-2 bg-neutral-900 hover:bg-neutral-800 border border-neutral-850 hover:border-neutral-700 text-[10px] font-semibold text-neutral-250 rounded-lg transition-all" title="Manage Activities">
+                        <i data-lucide="list-todo" class="w-3.5 h-3.5 text-blue-400"></i> Schedule
+                      </a>
+                      <a :href="'workspace.html?tripId=' + trip.id + '&tab=budget'" 
+                        class="flex items-center justify-center gap-1.5 py-2 bg-neutral-900 hover:bg-neutral-800 border border-neutral-850 hover:border-neutral-700 text-[10px] font-semibold text-neutral-250 rounded-lg transition-all" title="Budget Analytics">
+                        <i data-lucide="pie-chart" class="w-3.5 h-3.5 text-purple-400"></i> Budget
+                      </a>
+                    </div>
+
+                    <div class="mt-4 pt-4 border-t border-neutral-800/40 flex items-center justify-between" x-show="trip.is_public">
+                      <span class="text-[10px] uppercase font-semibold text-neutral-500 tracking-wider">Share Link</span>
+                      <button @click="copyShareLink(trip.share_slug)" class="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1">
+                        <i data-lucide="copy" class="w-3 h-3"></i> Copy Link
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- Ungrouped Trips View -->
+    <div x-show="!loading && !isGrouped && totalVisibleTripsCount > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <template x-for="trip in sortedAndFilteredTrips" :key="trip.id">
+        <div class="glass-card rounded-2xl overflow-hidden border border-neutral-800/40 flex flex-col relative group">
+          <!-- Cover Photo -->
+          <div class="h-44 overflow-hidden relative bg-neutral-900 border-b border-neutral-800/40">
+            <img :src="trip.cover_photo_url" :alt="trip.name" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+            
+            <span :class="trip.is_public ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-neutral-800/80 text-neutral-300 border-neutral-700'"
+              class="absolute top-4 left-4 text-xs font-semibold px-2.5 py-1 rounded-full border backdrop-blur-md flex items-center gap-1.5">
+              <i :data-lucide="trip.is_public ? 'globe' : 'lock'" class="w-3.5 h-3.5"></i>
+              <span x-text="trip.is_public ? 'Public' : 'Private'"></span>
+            </span>
+ 
+            <div class="absolute top-4 right-4" x-data="{ open: false }">
+              <button @click.prevent="open = !open" class="p-2 bg-neutral-900/80 hover:bg-neutral-900 border border-neutral-700/50 rounded-lg text-white backdrop-blur-md transition-colors">
+                <i data-lucide="more-vertical" class="w-4 h-4"></i>
+              </button>
+              <div x-show="open" @click.away="open = false" x-transition class="absolute right-0 mt-1 w-36 rounded-xl border border-neutral-800 bg-neutral-950/95 shadow-2xl p-1 z-20">
+                <button @click="deleteTripHandler(trip.id)" class="w-full flex items-center gap-2 px-3 py-2 text-xs text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors text-left">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete Trip
+                </button>
+              </div>
+            </div>
+          </div>
+ 
+          <!-- Trip details -->
+          <div class="p-5 flex-grow flex flex-col justify-between">
+            <div>
+              <h3 class="text-lg font-bold text-white line-clamp-1" x-text="trip.name">Trip Name</h3>
+              <p class="text-xs text-neutral-400 mt-1 flex items-center gap-1.5">
+                <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                <span x-text="formatDateRange(trip.start_date, trip.end_date)">Date Range</span>
+              </p>
+              <p class="text-sm text-neutral-300 mt-3 line-clamp-2" x-text="trip.description || 'No description provided.'"></p>
+            </div>
+ 
+            <div>
+              <div class="grid grid-cols-3 gap-1.5 mt-5">
+                <a :href="'workspace.html?tripId=' + trip.id + '&tab=stops'" 
+                  class="flex items-center justify-center gap-1.5 py-2 bg-neutral-900 hover:bg-neutral-800 border border-neutral-850 hover:border-neutral-700 text-[10px] font-semibold text-neutral-250 rounded-lg transition-all" title="Manage Stops">
+                  <i data-lucide="map-pin" class="w-3.5 h-3.5 text-emerald-400"></i> Stops
+                </a>
+                <a :href="'workspace.html?tripId=' + trip.id + '&tab=timeline'" 
+                  class="flex items-center justify-center gap-1.5 py-2 bg-neutral-900 hover:bg-neutral-800 border border-neutral-850 hover:border-neutral-700 text-[10px] font-semibold text-neutral-250 rounded-lg transition-all" title="Manage Activities">
+                  <i data-lucide="list-todo" class="w-3.5 h-3.5 text-blue-400"></i> Schedule
+                </a>
+                <a :href="'workspace.html?tripId=' + trip.id + '&tab=budget'" 
+                  class="flex items-center justify-center gap-1.5 py-2 bg-neutral-900 hover:bg-neutral-800 border border-neutral-850 hover:border-neutral-700 text-[10px] font-semibold text-neutral-250 rounded-lg transition-all" title="Budget Analytics">
+                  <i data-lucide="pie-chart" class="w-3.5 h-3.5 text-purple-400"></i> Budget
+                </a>
+              </div>
+
+              <div class="mt-4 pt-4 border-t border-neutral-800/40 flex items-center justify-between" x-show="trip.is_public">
+                <span class="text-[10px] uppercase font-semibold text-neutral-500 tracking-wider">Share Link</span>
+                <button @click="copyShareLink(trip.share_slug)" class="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1">
+                  <i data-lucide="copy" class="w-3 h-3"></i> Copy Link
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- FloatingBottom Right Plan Trip Action Button (Screen 3) -->
+    <div class="fixed bottom-6 right-6 z-40">
+      <a href="trip-create.html" class="flex items-center gap-2 px-5 py-4 rounded-full bg-emerald-500 hover:bg-emerald-600 text-black font-black text-sm transition-all shadow-2xl hover:scale-105 active:scale-95">
+        <i data-lucide="plus" class="w-5 h-5"></i>
+        <span>Plan a trip</span>
+      </a>
+    </div>
+
+  </main>
+
+  <!-- Scripts -->
+  <script type="module">
+    import { getSession } from './js/auth.js';
+    import { loadNavbar, showToast, refreshIcons } from './js/ui-helpers.js';
+    import { getTrips, deleteTrip } from './js/trips.js';
+    import { getSupabase } from './js/supabase-client.js';
+
+    const initDashboardPage = () => {
+      Alpine.data('dashboardPage', () => ({
+        authorized: false,
+        loading: true,
+        trips: [],
+        searchQuery: '',
+        isGrouped: false,
+        filterStatus: 'all', // all, public, private
+        sortBy: 'newest', // newest, oldest, name
+        sortByLabel: 'Newest',
+        selectedRegion: null,
+
+        regions: [
+          { name: 'Europe', icon: 'landmark' },
+          { name: 'Asia', icon: 'cherry-blossom' },
+          { name: 'North America', icon: 'building' },
+          { name: 'South America', icon: 'mountain' },
+          { name: 'Oceania', icon: 'waves' }
+        ],
+
+        async initDashboard() {
+          const session = await getSession();
+          if (!session) {
+            window.location.href = 'index.html';
+            return;
+          }
+          this.authorized = true;
+          await loadNavbar();
+          await this.loadTripsAndStats();
+        },
+
+        async loadTripsAndStats() {
+          this.loading = true;
+          try {
+            this.trips = await getTrips();
+            this.stats.totalTrips = this.trips.length;
+
+            const supabase = getSupabase();
+            if (supabase) {
+              const { data: stops, error } = await supabase
+                .from('stops')
+                .select('city_name, budget');
+              
+              if (!error && stops) {
+                const uniqueCities = new Set(stops.map(s => s.city_name.trim().toLowerCase()));
+                this.stats.totalCities = uniqueCities.size;
+                this.stats.totalBudget = stops.reduce((sum, stop) => sum + (parseFloat(stop.budget) || 0), 0);
+              }
+            }
+            refreshIcons();
+          } catch (err) {
+            showToast("Failed to load dashboard data", "error");
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        stats: {
+          totalTrips: 0,
+          totalCities: 0,
+          totalBudget: 0
+        },
+
+        toggleGrouping() {
+          this.isGrouped = !this.isGrouped;
+        },
+
+        selectRegion(regionName) {
+          if (this.selectedRegion === regionName) {
+            this.selectedRegion = null;
+          } else {
+            this.selectedRegion = regionName;
+          }
+        },
+
+        get sortedAndFilteredTrips() {
+          let list = [...this.trips];
+
+          // Text Search
+          if (this.searchQuery) {
+            list = list.filter(t => t.name.toLowerCase().includes(this.searchQuery.toLowerCase()));
+          }
+
+          // Visibility filter
+          if (this.filterStatus === 'public') {
+            list = list.filter(t => t.is_public);
+          } else if (this.filterStatus === 'private') {
+            list = list.filter(t => !t.is_public);
+          }
+
+          // Region filter
+          if (this.selectedRegion) {
+            const r = this.selectedRegion.toLowerCase();
+            list = list.filter(t => {
+              const matchesName = t.name.toLowerCase().includes(r) || (t.description && t.description.toLowerCase().includes(r));
+              // Also match mock or cover hints
+              return matchesName || t.cover_photo_url.toLowerCase().includes(r);
+            });
+          }
+
+          // Sorting
+          if (this.sortBy === 'name') {
+            list.sort((a, b) => a.name.localeCompare(b.name));
+          } else if (this.sortBy === 'oldest') {
+            list.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+          } else {
+            list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+          }
+
+          return list;
+        },
+
+        get totalVisibleTripsCount() {
+          return this.sortedAndFilteredTrips.length;
+        },
+
+        get categorizedTrips() {
+          const list = this.sortedAndFilteredTrips;
+          const todayStr = new Date().toISOString().split('T')[0];
+
+          const ongoing = [];
+          const upcoming = [];
+          const completed = [];
+
+          list.forEach(t => {
+            if (t.end_date < todayStr) {
+              completed.push(t);
+            } else if (t.start_date <= todayStr && t.end_date >= todayStr) {
+              ongoing.push(t);
+            } else {
+              upcoming.push(t);
+            }
+          });
+
+          return [
+            { title: 'Ongoing Adventures', items: ongoing },
+            { title: 'Upcoming Adventures', items: upcoming },
+            { title: 'Completed Adventures', items: completed }
+          ];
+        },
+
+        formatDateRange(start, end) {
+          const opt = { month: 'short', day: 'numeric', year: 'numeric' };
+          const s = new Date(start).toLocaleDateString(undefined, opt);
+          const e = new Date(end).toLocaleDateString(undefined, opt);
+          return `${s} — ${e}`;
+        },
+
+        copyShareLink(slug) {
+          const url = `${window.location.origin}/shared-trip.html?slug=${slug}`;
+          navigator.clipboard.writeText(url).then(() => {
+            showToast("Share link copied to clipboard!");
+          }).catch(e => {
+            showToast("Failed to copy link", "error");
+          });
+        },
+
+        async deleteTripHandler(id) {
+          if (confirm("Are you sure you want to delete this trip and all its stops/activities?")) {
+            try {
+              await deleteTrip(id);
+              showToast("Trip deleted successfully");
+              await this.loadTripsAndStats();
+            } catch (err) {
+              showToast("Failed to delete trip: " + err.message, "error");
+            }
+          }
+        }
+      }));
+    };
+
+    if (window.Alpine) {
+      initDashboardPage();
+    } else {
+      document.addEventListener('alpine:init', initDashboardPage);
+    }
+  </script>
+  <!-- AlpineJS -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</body>
+</html>

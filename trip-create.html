@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GlobeTrotter — Plan a New Trip</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            neutral: {
+              950: '#030303',
+              900: '#09090b',
+              850: '#121215',
+              800: '#18181b',
+              700: '#27272a',
+              600: '#3f3f46',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="css/custom.css">
+  <!-- Supabase CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    .pac-container {
+      background-color: #09090b !important;
+      border: 1px solid #27272a !important;
+      border-radius: 12px !important;
+      font-family: 'Inter', sans-serif !important;
+      margin-top: 5px !important;
+    }
+    .pac-item {
+      border-top: 1px solid #18181b !important;
+      padding: 10px 14px !important;
+      color: #e4e4e7 !important;
+      cursor: pointer;
+    }
+    .pac-item:hover {
+      background-color: #18181b !important;
+    }
+    .pac-item-query {
+      color: #ffffff !important;
+      font-size: 13px !important;
+    }
+    .pac-matched {
+      color: #10b981 !important;
+    }
+  </style>
+</head>
+<body class="bg-neutral-950 text-neutral-100 min-h-screen flex flex-col page-fade-in" x-data="createTripPage" x-init="initCreatePage()">
+
+  <!-- Toast Container and Navbar will be injected automatically -->
+
+  <main class="flex-grow max-w-4xl w-full mx-auto px-4 sm:px-6 py-8" x-cloak x-show="authorized">
+    
+    <!-- Breadcrumb back -->
+    <div class="mb-6">
+      <a href="dashboard.html" class="inline-flex items-center gap-2 text-xs font-semibold text-neutral-400 hover:text-white transition-colors">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+        <span>Back to Dashboard</span>
+      </a>
+    </div>
+
+    <!-- Page Title -->
+    <div class="mb-8">
+      <h1 class="text-3xl font-extrabold tracking-tight text-white">Plan a New Trip</h1>
+      <p class="text-neutral-400 text-sm mt-1">Specify destination, dates, and preview recommended local highlights beforehand.</p>
+    </div>
+
+    <!-- Screen 4 Setup -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      
+      <!-- Creation Form Card (Left Column) -->
+      <div class="lg:col-span-1 glass-card rounded-2xl border border-neutral-800/80 shadow-2xl p-6 flex flex-col h-fit">
+        <h3 class="text-sm font-bold text-white mb-4 border-b border-neutral-850 pb-2">Trip Specifications</h3>
+        <form @submit.prevent="handleSubmit" class="space-y-4">
+          
+          <!-- Trip Name -->
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-wider text-neutral-450 mb-1">Trip Name</label>
+            <input type="text" x-model="name" required placeholder="e.g. My Autumn Holiday" 
+              class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500/50">
+          </div>
+
+          <!-- Destination Select a Place (Screen 4 Autocomplete) -->
+          <div>
+            <label class="block text-[10px] font-bold uppercase tracking-wider text-neutral-450 mb-1">Select a Place</label>
+            <div class="relative">
+              <gmp-place-autocomplete id="dest-autocomplete" placeholder="Search city or country..."></gmp-place-autocomplete>
+            </div>
+          </div>
+
+          <!-- Dates -->
+          <div class="grid grid-cols-2 gap-4">
+            <!-- Start Date Custom Date Picker -->
+            <div class="relative" x-data="{ 
+              open: false, 
+              currentMonth: new Date().getMonth(), 
+              currentYear: new Date().getFullYear(),
+              init() {
+                this.$watch('startDate', value => {
+                  if (value) {
+                    const d = new Date(value);
+                    this.currentMonth = d.getMonth();
+                    this.currentYear = d.getFullYear();
+                  }
+                });
+              }
+            }" @click.outside="open = false">
+              <label class="block text-[10px] font-bold uppercase tracking-wider text-neutral-455 mb-1.5">Start Date</label>
+              <button type="button" @click="open = !open; $nextTick(() => refreshIcons())" 
+                class="w-full flex items-center justify-between bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2.5 text-xs text-white hover:border-emerald-500/50 hover:bg-neutral-850 transition-all select-none">
+                <span x-text="formatDateDisplay(startDate)">Pick a date</span>
+                <i data-lucide="calendar" class="w-3.5 h-3.5 text-neutral-500"></i>
+              </button>
+              
+              <!-- Calendar Dropdown (Shadcn style animation) -->
+              <div x-cloak x-show="open" 
+                x-transition:enter="transition ease-out duration-200"
+                x-transition:enter-start="opacity-0 scale-95 -translate-y-2"
+                x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                x-transition:leave="transition ease-in duration-150"
+                x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+                x-transition:leave-end="opacity-0 scale-95 -translate-y-2"
+                class="absolute left-0 z-50 mt-2 p-3.5 bg-neutral-950/95 backdrop-blur-md border border-neutral-800 rounded-2xl shadow-2xl w-60">
+                
+                <!-- Month/Year Header -->
+                <div class="flex justify-between items-center mb-2.5">
+                  <button type="button" @click="currentMonth === 0 ? (currentMonth = 11, currentYear--) : currentMonth--" 
+                    class="p-1 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-white transition-colors">
+                    <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+                  </button>
+                  <span class="text-[10px] font-bold text-white font-mono" x-text="`${['January','February','March','April','May','June','July','August','September','October','November','December'][currentMonth]} ${currentYear}`"></span>
+                  <button type="button" @click="currentMonth === 11 ? (currentMonth = 0, currentYear++) : currentMonth++" 
+                    class="p-1 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-white transition-colors">
+                    <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
+                
+                <!-- Days of Week Header -->
+                <div class="grid grid-cols-7 gap-0.5 text-center text-[9px] font-bold text-neutral-500 uppercase tracking-wider mb-1.5">
+                  <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+                </div>
+                
+                <!-- Days Grid -->
+                <div class="grid grid-cols-7 gap-0.5">
+                  <template x-for="dayObj in getCalendarDays(currentYear, currentMonth)" :key="dayObj.dateStr">
+                    <button type="button" 
+                      @click="startDate = dayObj.dateStr; open = false; validateDates();"
+                      :class="{
+                        'bg-emerald-500 text-black font-extrabold': startDate === dayObj.dateStr,
+                        'text-white hover:bg-neutral-800': startDate !== dayObj.dateStr && dayObj.isCurrentMonth,
+                        'text-neutral-600 hover:bg-neutral-900/40': startDate !== dayObj.dateStr && !dayObj.isCurrentMonth
+                      }"
+                      class="h-6.5 w-6.5 rounded-lg text-[10px] flex items-center justify-center transition-all duration-150 select-none">
+                      <span x-text="dayObj.day"></span>
+                    </button>
+                  </template>
+                </div>
+              </div>
+            </div>
+
+            <!-- End Date Custom Date Picker -->
+            <div class="relative" x-data="{ 
+              open: false, 
+              currentMonth: new Date().getMonth(), 
+              currentYear: new Date().getFullYear(),
+              init() {
+                this.$watch('endDate', value => {
+                  if (value) {
+                    const d = new Date(value);
+                    this.currentMonth = d.getMonth();
+                    this.currentYear = d.getFullYear();
+                  }
+                });
+              }
+            }" @click.outside="open = false">
+              <label class="block text-[10px] font-bold uppercase tracking-wider text-neutral-455 mb-1.5">End Date</label>
+              <button type="button" @click="open = !open; $nextTick(() => refreshIcons())" 
+                class="w-full flex items-center justify-between bg-neutral-900 border border-neutral-800 rounded-xl px-3 py-2.5 text-xs text-white hover:border-emerald-500/50 hover:bg-neutral-850 transition-all select-none">
+                <span x-text="formatDateDisplay(endDate)">Pick a date</span>
+                <i data-lucide="calendar" class="w-3.5 h-3.5 text-neutral-500"></i>
+              </button>
+              
+              <!-- Calendar Dropdown (Shadcn style animation) -->
+              <div x-cloak x-show="open" 
+                x-transition:enter="transition ease-out duration-200"
+                x-transition:enter-start="opacity-0 scale-95 -translate-y-2"
+                x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                x-transition:leave="transition ease-in duration-150"
+                x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+                x-transition:leave-end="opacity-0 scale-95 -translate-y-2"
+                class="absolute right-0 z-50 mt-2 p-3.5 bg-neutral-950/95 backdrop-blur-md border border-neutral-800 rounded-2xl shadow-2xl w-60">
+                
+                <!-- Month/Year Header -->
+                <div class="flex justify-between items-center mb-2.5">
+                  <button type="button" @click="currentMonth === 0 ? (currentMonth = 11, currentYear--) : currentMonth--" 
+                    class="p-1 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-white transition-colors">
+                    <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+                  </button>
+                  <span class="text-[10px] font-bold text-white font-mono" x-text="`${['January','February','March','April','May','June','July','August','September','October','November','December'][currentMonth]} ${currentYear}`"></span>
+                  <button type="button" @click="currentMonth === 11 ? (currentMonth = 0, currentYear++) : currentMonth++" 
+                    class="p-1 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-white transition-colors">
+                    <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
+                
+                <!-- Days of Week Header -->
+                <div class="grid grid-cols-7 gap-0.5 text-center text-[9px] font-bold text-neutral-500 uppercase tracking-wider mb-1.5">
+                  <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+                </div>
+                
+                <!-- Days Grid -->
+                <div class="grid grid-cols-7 gap-0.5">
+                  <template x-for="dayObj in getCalendarDays(currentYear, currentMonth)" :key="dayObj.dateStr">
+                    <button type="button" 
+                      @click="endDate = dayObj.dateStr; open = false; validateDates();"
+                      :class="{
+                        'bg-emerald-500 text-black font-extrabold': endDate === dayObj.dateStr,
+                        'text-white hover:bg-neutral-800': endDate !== dayObj.dateStr && dayObj.isCurrentMonth,
+                        'text-neutral-600 hover:bg-neutral-900/40': endDate !== dayObj.dateStr && !dayObj.isCurrentMonth
+                      }"
+                      class="h-6.5 w-6.5 rounded-lg text-[10px] flex items-center justify-center transition-all duration-150 select-none">
+                      <span x-text="dayObj.day"></span>
+                    </button>
+                  </template>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Trip Privacy Toggle -->
+          <div class="pt-2">
+            <label class="block text-[10px] font-bold uppercase tracking-wider text-neutral-455 mb-2">Trip Privacy</label>
+            <div class="flex items-center justify-between bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3">
+              <div class="flex items-center gap-2.5">
+                <i :data-lucide="isPublic ? 'globe' : 'lock'" :class="isPublic ? 'text-emerald-400' : 'text-neutral-400'" class="w-4 h-4 transition-colors"></i>
+                <div class="text-left">
+                  <p class="text-xs font-bold text-white" x-text="isPublic ? 'Public Plan' : 'Private Plan'"></p>
+                  <p class="text-[9px] text-neutral-500" x-text="isPublic ? 'Visible to anyone with the link' : 'Only you can view and edit'"></p>
+                </div>
+              </div>
+              <button type="button" @click="isPublic = !isPublic; $nextTick(() => refreshIcons())"
+                :class="isPublic ? 'bg-emerald-500' : 'bg-neutral-700'"
+                class="w-9 h-5 rounded-full p-0.5 transition-colors focus:outline-none relative flex items-center">
+                <span :class="isPublic ? 'translate-x-4' : 'translate-x-0'"
+                  class="w-4 h-4 rounded-full bg-black shadow-md transform transition-transform duration-200"></span>
+              </button>
+            </div>
+          </div>
+
+          <div class="pt-2">
+            <button type="submit" :disabled="submitting || dateError"
+              class="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:bg-neutral-850 disabled:text-neutral-500 active:scale-95 text-black font-extrabold text-xs transition-all flex items-center justify-center gap-2">
+              <span x-show="submitting" class="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin"></span>
+              <i x-show="!submitting" data-lucide="check" class="w-4 h-4"></i>
+              <span x-text="submitting ? 'Creating...' : 'Create & Proceed'"></span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Suggestions Column (Right Column - Screen 4 Suggestions area) -->
+      <div class="lg:col-span-2 space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-base font-extrabold text-white">Suggestion for Places to Visit</h3>
+            <p class="text-[11px] text-neutral-450">Dynamic sight recommendations powered by Google Places API based on selected destination.</p>
+          </div>
+        </div>
+
+        <!-- Suggestion list skeleton/empty state -->
+        <div x-show="suggestions.length === 0" class="glass-card rounded-2xl border border-neutral-850 p-12 text-center text-neutral-500 text-xs italic flex flex-col items-center justify-center gap-3">
+          <div class="w-12 h-12 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-400">
+            <i data-lucide="compass" class="w-6 h-6"></i>
+          </div>
+          <span>Select a destination to load top attractions & photo selections.</span>
+        </div>
+
+        <!-- Dynamic suggestions grid -->
+        <div x-show="suggestions.length > 0" class="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-slide-in">
+          <template x-for="s in suggestions" :key="s.name">
+            <div class="glass-card rounded-2xl overflow-hidden border border-neutral-850 flex flex-col group hover:border-neutral-700/60 transition-colors">
+              <div class="h-32 bg-neutral-900 relative overflow-hidden">
+                <img :src="s.photo" :alt="s.name" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                <div class="absolute top-2 right-2 bg-neutral-950/80 backdrop-blur-md border border-neutral-800/60 px-2 py-0.5 rounded-lg text-[9px] font-bold text-amber-400 flex items-center gap-0.5">
+                  <i data-lucide="star" class="w-3 h-3 fill-amber-400 text-amber-400"></i>
+                  <span x-text="s.rating || '4.5'"></span>
+                </div>
+              </div>
+              <div class="p-4 flex-grow flex flex-col justify-between">
+                <div>
+                  <h4 class="text-xs font-extrabold text-white line-clamp-1" x-text="s.name"></h4>
+                  <p class="text-[10px] text-neutral-450 mt-1 line-clamp-2" x-text="s.address || 'Local sight/attraction'"></p>
+                </div>
+                <div class="mt-3 flex justify-between items-center text-[10px]">
+                  <span class="text-neutral-500 uppercase font-semibold">Sightseeing</span>
+                  <span class="text-emerald-400 font-medium">Included Option</span>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+
+      </div>
+
+    </div>
+  </main>
+
+  <div id="places-service-anchor"></div>
+
+
+
+  <!-- Scripts -->
+  <script type="module">
+    import { config } from './js/config.js';
+    import { getSession } from './js/auth.js';
+    import { loadNavbar, showToast, refreshIcons } from './js/ui-helpers.js';
+    import { createTrip } from './js/trips.js';
+    import { createStop } from './js/stops.js';
+
+    const initCreateTripPage = () => {
+      Alpine.data('createTripPage', () => ({
+        authorized: false,
+        submitting: false,
+        dateError: false,
+        isPublic: false,
+
+        name: '',
+        startDate: '',
+        endDate: '',
+        selectedPlace: null, // { cityName, country, lat, lon }
+        suggestions: [],
+
+        async initCreatePage() {
+          const session = await getSession();
+          if (!session) {
+            window.location.href = 'index.html';
+            return;
+          }
+          this.authorized = true;
+          await loadNavbar();
+          
+          const today = new Date();
+          const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+          this.startDate = today.toISOString().split('T')[0];
+          this.endDate = nextWeek.toISOString().split('T')[0];
+
+          window.initGoogleSDK = () => {
+            this.initAutocomplete();
+          };
+
+          // Load Google Maps SDK dynamically
+          config.loadGoogleMapsSDK('initGoogleSDK', 'places');
+
+          if (typeof google !== 'undefined' && google.maps) {
+            this.initAutocomplete();
+          }
+
+          refreshIcons();
+        },
+
+        initAutocomplete() {
+          const input = document.getElementById('dest-autocomplete');
+          if (!input) return;
+
+          input.addEventListener('gmp-select', async ({ placePrediction }) => {
+            if (!placePrediction) return;
+            const place = placePrediction.toPlace();
+            
+            try {
+              await place.fetchFields({
+                fields: ['displayName', 'formattedAddress', 'location', 'addressComponents']
+              });
+
+              // Extract City and Country
+              let city = '';
+              let country = '';
+              if (place.addressComponents) {
+                place.addressComponents.forEach(c => {
+                  const name = c.longName || c.long_name || c.longText || c.shortName || c.short_name || '';
+                  if (c.types.includes('locality')) {
+                    city = name;
+                  } else if (c.types.includes('administrative_area_level_1') && !city) {
+                    city = name;
+                  } else if (c.types.includes('administrative_area_level_2') && !city) {
+                    city = name;
+                  }
+
+                  if (c.types.includes('country')) {
+                    country = name;
+                  }
+                });
+              }
+
+              if (!city) city = place.displayName || 'Unknown City';
+              if (!country) country = 'Unknown Country';
+
+              this.selectedPlace = {
+                cityName: city,
+                country: country,
+                lat: place.location.lat(),
+                lon: place.location.lng()
+              };
+
+              // Fetch suggestions based on lat/lng using PlacesService
+              this.fetchPlaceSuggestions(place.location);
+            } catch (err) {
+              console.error("Error fetching place details:", err);
+              showToast("Failed to fetch location details", "error");
+            }
+          });
+        },
+
+        fetchPlaceSuggestions(locationObj) {
+          const anchor = document.getElementById('places-service-anchor');
+          if (!anchor) return;
+
+          const service = new google.maps.places.PlacesService(anchor);
+          service.nearbySearch({
+            location: locationObj,
+            radius: 8000,
+            type: ['tourist_attraction']
+          }, (results, status) => {
+            if (status === google.maps.places.PlacesServiceStatus.OK && results) {
+              this.suggestions = results.slice(0, 6).map(r => ({
+                name: r.name,
+                rating: r.rating || 4.5,
+                address: r.vicinity || '',
+                photo: r.photos && r.photos[0] 
+                  ? r.photos[0].getUrl({ maxWidth: 400, maxHeight: 300 })
+                  : 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=400&q=300'
+              }));
+              this.$nextTick(() => refreshIcons());
+            } else {
+              // Fallback suggestions
+              this.suggestions = [
+                { name: "Central Historical Museum", rating: 4.8, address: "Downtown Area", photo: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=400" },
+                { name: "Scenic City View Point", rating: 4.7, address: "High Summit Pass", photo: "https://images.unsplash.com/photo-1454496522488-7a8e488e8606?auto=format&fit=crop&w=400" }
+              ];
+              this.$nextTick(() => refreshIcons());
+            }
+          });
+        },
+
+        validateDates() {
+          if (this.startDate && this.endDate) {
+            const start = new Date(this.startDate);
+            const end = new Date(this.endDate);
+            if (end < start) {
+              showToast("End date cannot be prior to start date", "error");
+              this.dateError = true;
+            } else {
+              this.dateError = false;
+            }
+          }
+        },
+
+        getCalendarDays(year, month) {
+          const firstDayIndex = new Date(year, month, 1).getDay();
+          const totalDays = new Date(year, month + 1, 0).getDate();
+          const prevTotalDays = new Date(year, month, 0).getDate();
+          
+          const days = [];
+          
+          // Prev month padding days
+          for (let i = firstDayIndex - 1; i >= 0; i--) {
+            days.push({
+              day: prevTotalDays - i,
+              isCurrentMonth: false,
+              dateStr: this.formatDateStr(year, month - 1, prevTotalDays - i)
+            });
+          }
+          
+          // Current month days
+          for (let i = 1; i <= totalDays; i++) {
+            days.push({
+              day: i,
+              isCurrentMonth: true,
+              dateStr: this.formatDateStr(year, month, i)
+            });
+          }
+          
+          // Next month padding days to fill 42 cells (6 rows * 7 columns)
+          const remaining = 42 - days.length;
+          for (let i = 1; i <= remaining; i++) {
+            days.push({
+              day: i,
+              isCurrentMonth: false,
+              dateStr: this.formatDateStr(year, month + 1, i)
+            });
+          }
+          
+          return days;
+        },
+
+        formatDateStr(year, month, day) {
+          const d = new Date(year, month, day);
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, '0');
+          const dayStr = String(d.getDate()).padStart(2, '0');
+          return `${y}-${m}-${dayStr}`;
+        },
+
+        formatDateDisplay(dateStr) {
+          if (!dateStr) return "Pick a date";
+          const parts = dateStr.split('-');
+          if (parts.length !== 3) return dateStr;
+          const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+          const y = parts[0];
+          const m = months[parseInt(parts[1]) - 1];
+          const d = parseInt(parts[2]);
+          return `${m} ${d}, ${y}`;
+        },
+
+        async handleSubmit() {
+          if (this.dateError) return;
+          if (!this.selectedPlace) {
+            showToast("Please select a place using the autocomplete search input first.", "error");
+            return;
+          }
+
+          this.submitting = true;
+          try {
+            // 1. Create Trip with name, description, start_date, end_date
+            const newTrip = await createTrip({
+              name: this.name || `Trip to ${this.selectedPlace.cityName}`,
+              description: `A custom planned adventure to ${this.selectedPlace.cityName}, ${this.selectedPlace.country}.`,
+              start_date: this.startDate,
+              end_date: this.endDate,
+              cover_photo_url: this.suggestions[0]?.photo || 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=800&q=80',
+              is_public: this.isPublic
+            });
+
+            // 2. Automatically create the first stop matching the selected place
+            await createStop({
+              trip_id: newTrip.id,
+              city_name: this.selectedPlace.cityName,
+              country: this.selectedPlace.country,
+              start_date: this.startDate,
+              end_date: this.endDate,
+              budget: 0,
+              order_index: 0
+            });
+
+            showToast("Trip & Stop created successfully!", "success");
+            setTimeout(() => {
+              window.location.href = `workspace.html?tripId=${newTrip.id}&tab=timeline`;
+            }, 800);
+          } catch (err) {
+            showToast("Failed to create trip: " + err.message, "error");
+          } finally {
+            this.submitting = false;
+          }
+        }
+      }));
+    };
+
+    if (window.Alpine) {
+      initCreateTripPage();
+    } else {
+      document.addEventListener('alpine:init', initCreateTripPage);
+    }
+  </script>
+  <!-- Alpine.js -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</body>
+</html>

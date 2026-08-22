@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GlobeTrotter — Profile & Settings</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            neutral: {
+              950: '#030303',
+              900: '#09090b',
+              850: '#121215',
+              800: '#18181b',
+              700: '#27272a',
+              600: '#3f3f46',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="css/custom.css">
+  <!-- Supabase CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+  </style>
+</head>
+<body class="bg-neutral-950 text-neutral-100 min-h-screen flex flex-col page-fade-in" x-data="profilePage" x-init="initProfile()">
+
+  <!-- Toast Container and Navbar will be injected automatically -->
+
+  <main class="flex-grow max-w-5xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8" x-cloak x-show="authorized">
+    
+    <!-- Title -->
+    <div class="mb-8">
+      <h1 class="text-3xl font-extrabold tracking-tight text-white">Profile Settings</h1>
+      <p class="text-neutral-400 text-sm mt-1">Manage your account information and preview your personal itineraries (Screen 7).</p>
+    </div>
+
+    <!-- Layout Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      
+      <!-- Left sidebar avatar view -->
+      <div class="space-y-6">
+        <div class="glass-panel rounded-2xl border border-neutral-800/80 p-6 flex flex-col items-center text-center">
+          <div class="relative w-24 h-24 mb-4">
+            <img :src="profileData.avatar_url" alt="Avatar" class="w-full h-full rounded-full border border-neutral-700 object-cover" onerror="this.src='https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80'">
+          </div>
+          <h2 class="text-lg font-bold text-white" x-text="(profileData.first_name || '') + ' ' + (profileData.last_name || '')"></h2>
+          <p class="text-xs text-neutral-450 mt-0.5" x-text="profileData.email"></p>
+          <span class="mt-4 px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs rounded-full" x-text="(profileData.city || 'No City') + ', ' + (profileData.country || 'No Country')"></span>
+        </div>
+
+        <!-- Connection Diagnostics Status -->
+        <div class="p-4 bg-neutral-900/60 border border-neutral-800/40 rounded-xl space-y-3">
+          <h4 class="text-xs font-semibold uppercase tracking-wider text-neutral-400">Connection Status</h4>
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-neutral-500">Database Engine</span>
+            <span class="font-bold text-emerald-450 flex items-center gap-1">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 inline-block"></span> Supabase (Postgres)
+            </span>
+          </div>
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-neutral-500">RLS Status</span>
+            <span class="font-semibold text-neutral-300">Active (Row-Level)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main forms & Lists column -->
+      <div class="lg:col-span-2 space-y-8">
+        
+        <!-- Profile details card -->
+        <div class="glass-panel rounded-2xl border border-neutral-800/80 p-6 md:p-8">
+          <h3 class="text-sm font-bold uppercase tracking-wider text-neutral-400 mb-6 flex items-center gap-2">
+            <i data-lucide="user-cog" class="w-4 h-4 text-emerald-400"></i>
+            <span>Account Parameters</span>
+          </h3>
+
+          <form @submit.prevent="saveProfileDetails" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-neutral-450 mb-1.5">First Name</label>
+                <input type="text" x-model="profileData.first_name" required
+                  class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/50">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-neutral-450 mb-1.5">Last Name</label>
+                <input type="text" x-model="profileData.last_name" required
+                  class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/50">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-neutral-450 mb-1.5">Phone Number</label>
+              <input type="tel" x-model="profileData.phone" placeholder="+1 (555) 000-0000"
+                class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/50">
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-neutral-450 mb-1.5">City</label>
+                <input type="text" x-model="profileData.city" placeholder="e.g. San Francisco"
+                  class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/50">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-neutral-450 mb-1.5">Country</label>
+                <input type="text" x-model="profileData.country" placeholder="e.g. United States"
+                  class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/50">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-neutral-450 mb-1.5">Avatar URL</label>
+              <input type="url" x-model="profileData.avatar_url" placeholder="https://images.unsplash.com/photo-..."
+                class="w-full bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-emerald-500/50">
+            </div>
+
+            <div class="flex justify-end pt-2">
+              <button type="submit" :disabled="savingProfile"
+                class="px-5 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:bg-neutral-800 disabled:text-neutral-500 text-black font-semibold text-xs transition-colors flex items-center gap-1.5">
+                <span x-show="savingProfile" class="w-3.5 h-3.5 border-2 border-black border-t-transparent rounded-full animate-spin"></span>
+                <i x-show="!savingProfile" data-lucide="check-square" class="w-4 h-4"></i>
+                <span x-text="savingProfile ? 'Saving...' : 'Update Settings'"></span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Preplanned Trips (Screen 7 upcoming trips list) -->
+        <div class="glass-panel rounded-2xl border border-neutral-800/80 p-6 md:p-8">
+          <h3 class="text-sm font-bold uppercase tracking-wider text-neutral-400 mb-6 flex items-center gap-2">
+            <i data-lucide="calendar-plus" class="w-4 h-4 text-emerald-400"></i>
+            <span>Preplanned Trips</span>
+          </h3>
+
+          <div x-show="preplannedTrips.length === 0" class="text-neutral-500 text-xs italic py-2">
+            No upcoming trips scheduled yet.
+          </div>
+
+          <div x-show="preplannedTrips.length > 0" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <template x-for="t in preplannedTrips" :key="t.id">
+              <div class="bg-neutral-950 p-4 border border-neutral-850 rounded-2xl flex flex-col justify-between">
+                <div>
+                  <h4 class="text-xs font-bold text-white" x-text="t.name"></h4>
+                  <span class="text-[9px] text-neutral-450 block mt-1" x-text="formatDateRange(t.start_date, t.end_date)"></span>
+                </div>
+                <div class="mt-4 flex justify-end">
+                  <a :href="'workspace.html?tripId=' + t.id + '&tab=timeline'" class="px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-[10px] text-white border border-neutral-850 rounded-lg font-bold transition-all">
+                    View Plan
+                  </a>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Previous Trips (Screen 7 completed trips list) -->
+        <div class="glass-panel rounded-2xl border border-neutral-800/80 p-6 md:p-8">
+          <h3 class="text-sm font-bold uppercase tracking-wider text-neutral-400 mb-6 flex items-center gap-2">
+            <i data-lucide="history" class="w-4 h-4 text-neutral-500"></i>
+            <span>Previous Trips</span>
+          </h3>
+
+          <div x-show="previousTrips.length === 0" class="text-neutral-500 text-xs italic py-2">
+            No completed trips archived yet.
+          </div>
+
+          <div x-show="previousTrips.length > 0" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <template x-for="t in previousTrips" :key="t.id">
+              <div class="bg-neutral-950 p-4 border border-neutral-850 rounded-2xl flex flex-col justify-between">
+                <div>
+                  <h4 class="text-xs font-bold text-neutral-300" x-text="t.name"></h4>
+                  <span class="text-[9px] text-neutral-500 block mt-1" x-text="formatDateRange(t.start_date, t.end_date)"></span>
+                </div>
+                <div class="mt-4 flex justify-end">
+                  <a :href="'workspace.html?tripId=' + t.id + '&tab=timeline'" class="px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-[10px] text-white border border-neutral-850 rounded-lg font-bold transition-all">
+                    View Route
+                  </a>
+                </div>
+              </div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Supabase Connection Config Manager card -->
+        <div class="glass-panel rounded-2xl border border-neutral-800/80 p-6 md:p-8">
+          <h3 class="text-sm font-bold uppercase tracking-wider text-neutral-450 mb-4 flex items-center gap-2">
+            <i data-lucide="database" class="w-4 h-4 text-purple-400"></i>
+            <span>Supabase Connection Config</span>
+          </h3>
+          <p class="text-xs text-neutral-400 leading-relaxed mb-6">
+            You can disconnect or change your active Supabase connection keys below. Disconnecting removes local credentials from localStorage.
+          </p>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-[10px] font-bold text-neutral-500 uppercase tracking-wider mb-1">Active Project URL</label>
+              <div class="bg-neutral-950 px-4 py-2.5 border border-neutral-905 rounded-xl text-xs font-mono text-neutral-350 select-all overflow-x-auto" x-text="currentUrl"></div>
+            </div>
+            <div>
+              <label class="block text-[10px] font-bold text-neutral-500 uppercase tracking-wider mb-1">Google Maps API Key</label>
+              <div class="flex gap-2">
+                <input type="text" x-model="googleMapsKey" placeholder="Paste Google Maps API Key"
+                  class="flex-grow bg-neutral-950 px-4 py-2.5 border border-neutral-850 rounded-xl text-xs font-mono text-white focus:outline-none focus:border-emerald-500/50">
+                <button @click="saveMapsKey()"
+                  class="px-4 py-2 text-xs font-semibold rounded-xl bg-emerald-500 text-black hover:bg-emerald-600 active:scale-95 transition-all">
+                  Save Key
+                </button>
+              </div>
+              <p class="text-[10px] text-neutral-500 mt-1">Allows overriding the default API key to bypass referrer restrictions on custom local ports.</p>
+            </div>
+            <div class="flex gap-3 pt-2">
+              <button @click="disconnectCredentials()" 
+                class="px-4 py-2.5 text-xs font-semibold rounded-xl bg-rose-500/10 text-rose-450 border border-rose-500/20 hover:bg-rose-500 hover:text-black transition-colors flex items-center gap-1.5">
+                <i data-lucide="unplug" class="w-4 h-4"></i>
+                <span>Disconnect Credentials</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- Scripts -->
+  <script type="module">
+    import { getSession, getCurrentUser, updateProfile } from './js/auth.js';
+    import { config } from './js/config.js';
+    import { loadNavbar, showToast, refreshIcons } from './js/ui-helpers.js';
+    import { getTrips } from './js/trips.js';
+
+    const initProfilePage = () => {
+      Alpine.data('profilePage', () => ({
+        authorized: false,
+        savingProfile: false,
+        currentUrl: '',
+        googleMapsKey: '',
+        profileData: {
+          email: '',
+          first_name: '',
+          last_name: '',
+          phone: '',
+          city: '',
+          country: '',
+          avatar_url: ''
+        },
+
+        trips: [],
+        preplannedTrips: [],
+        previousTrips: [],
+
+        async initProfile() {
+          const session = await getSession();
+          if (!session) {
+            window.location.href = 'index.html';
+            return;
+          }
+          this.authorized = true;
+          await loadNavbar();
+          this.currentUrl = config.getSupabaseUrl();
+          this.googleMapsKey = config.getGoogleMapsKey();
+          await this.loadUserProfile();
+          await this.loadItineraries();
+        },
+
+        async loadUserProfile() {
+          try {
+            const profile = await getCurrentUser();
+            if (profile) {
+              this.profileData = { ...this.profileData, ...profile };
+            }
+            refreshIcons();
+          } catch (e) {
+            showToast("Failed to retrieve profile data: " + e.message, "error");
+          }
+        },
+
+        async loadItineraries() {
+          try {
+            this.trips = await getTrips();
+            const todayStr = new Date().toISOString().split('T')[0];
+
+            this.preplannedTrips = this.trips.filter(t => t.start_date >= todayStr);
+            this.previousTrips = this.trips.filter(t => t.end_date < todayStr);
+
+            refreshIcons();
+          } catch (e) {
+            console.error(e);
+          }
+        },
+
+        async saveProfileDetails() {
+          this.savingProfile = true;
+          try {
+            await updateProfile(this.profileData);
+            showToast("Profile details updated successfully!");
+            await this.loadUserProfile();
+          } catch (e) {
+            showToast("Error updating profile: " + e.message, "error");
+          } finally {
+            this.savingProfile = false;
+          }
+        },
+
+        saveMapsKey() {
+          if (config.setGoogleMapsKey(this.googleMapsKey)) {
+            showToast("Google Maps API Key saved! Reloading page...", "success");
+            setTimeout(() => window.location.reload(), 1500);
+          } else {
+            showToast("Please enter a valid API Key.", "error");
+          }
+        },
+
+        disconnectCredentials() {
+          if (confirm("Are you sure you want to disconnect? You will be signed out and redirected to credentials connect panel.")) {
+            config.clearCredentials();
+            config.clearGoogleMapsKey();
+            showToast("Credentials wiped. Redirecting...");
+            setTimeout(() => {
+              window.location.href = 'index.html';
+            }, 800);
+          }
+        },
+
+        formatDateRange(start, end) {
+          const opt = { month: 'short', day: 'numeric', year: 'numeric' };
+          const s = new Date(start).toLocaleDateString(undefined, opt);
+          const e = new Date(end).toLocaleDateString(undefined, opt);
+          return `${s} — ${e}`;
+        }
+      }));
+    };
+
+    if (window.Alpine) {
+      initProfilePage();
+    } else {
+      document.addEventListener('alpine:init', initProfilePage);
+    }
+  </script>
+  <!-- Alpine.js (Must load AFTER module scripts register components) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</body>
+</html>
